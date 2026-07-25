@@ -18,7 +18,8 @@ Files expected in repo:
 import glob
 import os
 import random
-import textwrap
+
+import translate
 
 from PIL import Image, ImageDraw, ImageFont, features
 
@@ -82,10 +83,11 @@ def _wrap_rtl(draw, text, font, max_w):
 
 def _text_fields(job):
     """Arabic strings, preferring hand-written overrides from manual.json."""
+    translate.enrich(job)
     title = job.get("title_ar") or job["title"]
     org = job.get("org_ar") or job["org"]
     loc = job.get("location_ar") or job["location"]
-    closing = job["closing"]
+    closing = job.get("closing_ar") or job["closing"]
     return org, title, loc, closing
 
 
@@ -192,3 +194,4 @@ if __name__ == "__main__":
     for i, j in enumerate(jobs):
         p = build_card(j, f"sample_{i}.png")
         print("wrote", p)
+     
