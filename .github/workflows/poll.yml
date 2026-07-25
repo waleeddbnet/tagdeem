@@ -32,10 +32,10 @@ jobs:
 
       - name: Poll and post
         env:
-          DRY_RUN: ${{ github.event_name == 'schedule' && 'true' || inputs.dry_run }}
+          DRY_RUN: 'false'
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
           FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
-          MAX_PER_RUN: '4'
+          MAX_PER_RUN: '1'
           SPACING_MIN: '40'
         run: python main.py
 
