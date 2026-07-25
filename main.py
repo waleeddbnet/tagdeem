@@ -15,6 +15,7 @@ import requests
 
 import sources
 import render
+import translate
 
 STATE_FILE = "state.json"
 GRAPH = "https://graph.facebook.com/v25.0"
@@ -42,18 +43,23 @@ def save_state(s):
 
 
 def caption(j):
+    translate.enrich(j)
     title = j.get("title_ar") or j["title"]
     org = j.get("org_ar") or j["org"]
     loc = j.get("location_ar") or j["location"]
+    closing = j.get("closing_ar") or j["closing"]
     lines = [
         f"فرصة عمل | {org}",
         "",
         f"الوظيفة: {title}",
     ]
+    # keep the English title too - applicants search for it
+    if j.get("title_ar") and j["title_ar"] != j["title"]:
+        lines.append(f"({j['title']})")
     if loc:
         lines.append(f"الموقع: {loc}")
     lines += [
-        f"آخر موعد للتقديم: {j['closing']}",
+        f"آخر موعد للتقديم: {closing}",
         "",
         f"رابط التقديم:\n{j['url']}",
         "",
@@ -132,6 +138,7 @@ def main():
 
     print(f"{len(new)} new after dedup")
     batch = new[:MAX_PER_RUN]
+    sent = 0
 
     for n, j in enumerate(batch):
         print(f"\n[{j['key']}] {j['org']} / {j['title']}")
@@ -147,6 +154,7 @@ def main():
         else:
             ok = publish(j, n)
         if ok:
+            sent += 1
             keys.add(j["key"])
             fps.add(j["fp"])
 
@@ -154,9 +162,10 @@ def main():
     state["fps"] = sorted(fps)[-KEEP:]
     save_state(state)
 
-    print(f"\ndone. dry_run={DRY_RUN} posted={len(batch)} "
+    print(f"\ndone. dry_run={DRY_RUN} posted={sent} "
           f"queued={len(new) - len(batch)} failed_sources={errors}")
 
 
 if __name__ == "__main__":
     main()
+    
