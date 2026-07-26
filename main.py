@@ -58,14 +58,29 @@ def caption(j):
         lines.append(f"({j['title']})")
     if loc:
         lines.append(f"الموقع: {loc}")
+    if closing:
+        lines.append(f"آخر موعد للتقديم: {closing}")
     lines += [
-        f"آخر موعد للتقديم: {closing}",
         "",
         f"رابط التقديم:\n{j['url']}",
         "",
-        "#وظائف_السودان #وظائف_شاغرة #الأمم_المتحدة",
+        _tags(j),
     ]
     return "\n".join(lines)
+
+
+UN_ORGS = ("unhcr", "unicef", "undp", "unfpa", "unops", "wfp", "who", "fao",
+           "iom", "unido", "unesco", "ocha", "united nations")
+
+
+def _tags(j):
+    tags = ["#وظائف_السودان", "#وظائف_شاغرة"]
+    org = j.get("org", "").lower()
+    if any(u in org for u in UN_ORGS):
+        tags.append("#الأمم_المتحدة")
+    elif j.get("source") == "sudani":
+        tags.append("#سوداني")
+    return " ".join(tags)
 
 
 def publish(j, n):
@@ -168,4 +183,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
+        
