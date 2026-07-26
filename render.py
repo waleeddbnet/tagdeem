@@ -1,52 +1,48 @@
 #!/usr/bin/env python3
 """
-Image card renderer. Two layouts, auto-selected:
+Tagdeem card renderer.
 
-  * logo present  -> branded card: brand color band + org logo + Arabic text
-  * no logo        -> background overlay: pick a bg from backgrounds/, dim it,
-                      lay the same Arabic text on top
+Light layout: white ground, brand blue accents, photo band with a bright
+blue tint, Arabic type. One consistent design for every organisation.
 
-Both share one text block, so wording is identical regardless of layout.
-Requires Pillow built with RAQM (HarfBuzz + FriBidi) for correct Arabic shaping.
+The photo band is the flexible element - text is measured first and the
+photo takes whatever height remains. This is what prevents long titles
+from colliding with the meta block.
 
-Files expected in repo:
-  fonts/Tajawal-Bold.ttf
-  fonts/Tajawal-Regular.ttf
-  logos/<org_slug>.png       (optional, per org)
-  backgrounds/*.jpg          (optional, any number; used when no logo)
+Files expected in the repo:
+    fonts/Tajawal-Bold.ttf
+    fonts/Tajawal-Regular.ttf
+    logos/page.png          your page logo, transparent PNG
+    backgrounds/*.jpg       photos; <category>.jpg or default.jpg
 """
 import glob
 import os
 import random
 
+from PIL import Image, ImageDraw, ImageFont, ImageOps, features
+
 import translate
 
-from PIL import Image, ImageDraw, ImageFont, features
-
-W, H = 1200, 630
-MARGIN = 80
+W = H = 1080
+M = 78
 FONTS = "fonts"
 LOGOS = "logos"
 BACKGROUNDS = "backgrounds"
 
-# brand palette, deterministic per org so a given org always gets one color
-PALETTE = [
-    (11, 79, 108),    # deep teal
-    (23, 55, 94),     # navy
-    (91, 33, 50),     # maroon
-    (46, 74, 38),     # forest
-    (74, 47, 89),     # plum
-    (140, 74, 20),    # ochre
-]
-FG = (255, 255, 255)
-ACCENT = (240, 200, 90)
+BLUE  = (7, 74, 153)
+DARK  = (23, 35, 54)
+GREY  = (122, 134, 152)
+RULE  = (223, 230, 240)
+WHITE = (255, 255, 255)
+
+TAGLINE = "شركاؤك في الوصول"
 
 
 def _assert_raqm():
     if not features.check("raqm"):
         raise RuntimeError(
-            "Pillow lacks RAQM - Arabic will not shape. "
-            "Install libraqm (apt: libraqm0) or a Pillow wheel with RAQM."
+            "Pillow lacks RAQM - Arabic will not shape correctly. "
+            "Install libraqm (apt: libraqm0)."
         )
 
 
@@ -54,24 +50,17 @@ def _font(name, size):
     return ImageFont.truetype(os.path.join(FONTS, name), size)
 
 
-def _ar(draw, xy, text, font, fill, anchor="ra"):
-    """Draw one line of Arabic, right-aligned by default."""
-    draw.text(xy, text, font=font, fill=fill, anchor=anchor,
-              direction="rtl", language="ar", features=["kern", "liga"])
+def _ar(d, xy, t, f, fill, anchor="ra"):
+    d.text(xy, t, font=f, fill=fill, anchor=anchor,
+           direction="rtl", language="ar", features=["kern", "liga"])
 
 
-def _color_for(slug):
-    return PALETTE[hash(slug) % len(PALETTE)]
-
-
-def _wrap_rtl(draw, text, font, max_w):
-    """Greedy word wrap that respects pixel width."""
-    words = text.split()
-    lines, cur = [], ""
+def _wrap(d, text, f, maxw):
+    words, lines, cur = text.split(), [], ""
     for w in words:
-        trial = (cur + " " + w).strip()
-        if draw.textlength(trial, font=font, direction="rtl", language="ar") <= max_w:
-            cur = trial
+        t = (cur + " " + w).strip()
+        if d.textlength(t, font=f, direction="rtl", language="ar") <= maxw:
+            cur = t
         else:
             if cur:
                 lines.append(cur)
@@ -81,117 +70,158 @@ def _wrap_rtl(draw, text, font, max_w):
     return lines
 
 
-def _text_fields(job):
-    """Arabic strings, preferring hand-written overrides from manual.json."""
-    translate.enrich(job)
-    title = job.get("title_ar") or job["title"]
-    org = job.get("org_ar") or job["org"]
-    loc = job.get("location_ar") or job["location"]
-    closing = job.get("closing_ar") or job["closing"]
-    return org, title, loc, closing
+# --------------------------------------------------------------------------
+# Category detection -> background image choice
+# --------------------------------------------------------------------------
+CATEGORIES = [
+    ("health",      ["nurse", "midwife", "doctor", "medical", "clinic", "health",
+                     "pharmacist", "nutrition", "surgeon", "lab"]),
+    ("education",   ["teacher", "education", "school", "training", "trainer",
+                     "curriculum", "learning"]),
+    ("it",          ["software", "developer", "cloud", "infrastructure", "network",
+                     "database", "cyber", "ict", "data center", "devops",
+                     "system", "technology", "digital"]),
+    ("finance",     ["finance", "account", "budget", "audit", "ledger", "payroll",
+                     "treasury", "tax", "cashier", "grants"]),
+    ("logistics",   ["logistic", "supply chain", "warehouse", "storekeeper",
+                     "procurement", "fleet", "transport", "inventory"]),
+    ("driver",      ["driver", "mechanic", "vehicle"]),
+    ("engineering", ["engineer", "technician", "electrician", "construction",
+                     "workshop", "power", "maintenance"]),
+    ("wash",        ["wash", "water", "sanitation", "hygiene", "borehole"]),
+    ("agriculture", ["agricultur", "livelihood", "farm", "veterinary", "food security"]),
+    ("protection",  ["protection", "gbv", "child", "psychosocial", "social worker",
+                     "case management", "counsel", "legal"]),
+    ("security",    ["security", "safety", "guard", "access"]),
+    ("marketing",   ["marketing", "communication", "media", "creative", "design",
+                     "brand", "advocacy"]),
+    ("callcenter",  ["call center", "contact center", "customer service", "agent"]),
+    ("hr",          ["human resources", "recruitment", "personnel", "talent"]),
+    ("admin",       ["admin", "office", "clerk", "receptionist", "secretary",
+                     "assistant", "coordinator", "data entry"]),
+    ("management",  ["director", "manager", "head of", "chief", "lead", "officer"]),
+]
 
 
-def _paste_logo(canvas, slug, box):
-    path = os.path.join(LOGOS, f"{slug}.png")
-    if not slug or not os.path.exists(path):
-        return False
-    logo = Image.open(path).convert("RGBA")
-    bx, by, bw, bh = box
-    ratio = min(bw / logo.width, bh / logo.height)
-    logo = logo.resize((int(logo.width * ratio), int(logo.height * ratio)))
-    canvas.paste(logo, (bx + (bw - logo.width) // 2,
-                        by + (bh - logo.height) // 2), logo)
-    return True
+def detect_category(job):
+    hay = (job.get("title", "") + " " + job.get("category", "")).lower()
+    for slug, keys in CATEGORIES:
+        if any(k in hay for k in keys):
+            return slug
+    return None
 
 
-def _pick_background():
+def _bg_file(name):
+    for ext in (".jpg", ".jpeg", ".png"):
+        p = os.path.join(BACKGROUNDS, name + ext)
+        if os.path.exists(p):
+            return p
+    return None
+
+
+def _pick_background(job=None):
+    if job:
+        cat = detect_category(job)
+        if cat:
+            p = _bg_file(cat)
+            if p:
+                return p
+    p = _bg_file("default")
+    if p:
+        return p
     files = glob.glob(os.path.join(BACKGROUNDS, "*.jpg")) + \
             glob.glob(os.path.join(BACKGROUNDS, "*.png"))
     return random.choice(files) if files else None
 
 
-def _base_card(slug):
-    """Solid brand color with a darker header band."""
-    color = _color_for(slug)
-    img = Image.new("RGB", (W, H), color)
-    d = ImageDraw.Draw(img)
-    darker = tuple(int(c * 0.72) for c in color)
-    d.rectangle([0, 0, W, 150], fill=darker)
-    d.rectangle([0, H - 12, W, H], fill=ACCENT)
-    return img
+def _light_tint(img):
+    """Bright airy blue tint. Lifts tones first so nothing reads as gloomy."""
+    g = ImageOps.grayscale(img)
+    g = ImageOps.autocontrast(g, cutoff=3)
+    g = g.point(lambda v: min(255, int(70 + v * 0.86)))
+    return ImageOps.colorize(g, black=(31, 82, 150), mid=(126, 168, 214),
+                             white=(255, 255, 255),
+                             blackpoint=0, midpoint=128, whitepoint=255)
 
 
-def _base_background():
-    path = _pick_background()
-    if not path:
-        return None
-    img = Image.open(path).convert("RGB").resize((W, H))
-    # dim for text legibility
-    overlay = Image.new("RGB", (W, H), (10, 15, 25))
-    img = Image.blend(img, overlay, 0.55)
-    d = ImageDraw.Draw(img)
-    d.rectangle([0, H - 12, W, H], fill=ACCENT)
-    return img
+def _text_fields(job):
+    translate.enrich(job)
+    return (job.get("org_ar") or job["org"],
+            job.get("title_ar") or job["title"],
+            job.get("location_ar") or job["location"],
+            job.get("closing_ar") or job["closing"])
 
 
 def build_card(job, out_path):
     _assert_raqm()
     org, title, loc, closing = _text_fields(job)
-    slug = job.get("org_slug", "")
 
-    has_logo = os.path.exists(os.path.join(LOGOS, f"{slug}.png")) if slug else False
+    im = Image.new("RGB", (W, H), WHITE)
+    d = ImageDraw.Draw(im)
 
-    if has_logo:
-        img = _base_card(slug)
+    # header: logo right, blue edge mark left
+    logo_p = os.path.join(LOGOS, "page.png")
+    if os.path.exists(logo_p):
+        lg = Image.open(logo_p).convert("RGBA")
+        lw = 200
+        lg = lg.resize((lw, int(lg.height * lw / lg.width)))
+        im.paste(lg, (W - M - lw, 34), lg)
     else:
-        img = _base_background() or _base_card(slug)
+        _ar(d, (W - M, 70), "تقديم للوظائف", _font("Tajawal-Bold.ttf", 46), BLUE)
+    d.rectangle([0, 0, 16, 190], fill=BLUE)
 
-    d = ImageDraw.Draw(img)
-    f_org = _font("Tajawal-Bold.ttf", 46)
-    f_title = _font("Tajawal-Bold.ttf", 62)
-    f_meta = _font("Tajawal-Regular.ttf", 40)
-    f_tag = _font("Tajawal-Bold.ttf", 34)
+    # measure text first; the photo takes whatever height is left
+    fy, TOP = H - 96, 210
+    rule_y = fy - 150
+    LABEL, ORG = 50, 62
 
-    right = W - MARGIN
+    for size in (76, 70, 64, 58, 52, 46, 40):
+        ft = _font("Tajawal-Bold.ttf", size)
+        lines = _wrap(d, title, ft, W - 2 * M)[:3]
+        text_h = LABEL + ORG + len(lines) * (size + 14)
+        photo_h = rule_y - 24 - TOP - text_h - 54
+        if photo_h >= 240:
+            break
+    photo_h = max(200, photo_h)
 
-    # header: "فرصة عمل" tag + org name
-    _ar(d, (right, 45), "فرصة عمل", f_tag, ACCENT)
-    if has_logo:
-        _paste_logo(img, slug, (MARGIN, 30, 220, 90))
+    # photo band
+    bg = _pick_background(job)
+    if bg:
+        p = Image.open(bg).convert("RGB")
+        r = max(W / p.width, photo_h / p.height)
+        p = p.resize((int(p.width * r) + 1, int(p.height * r) + 1))
+        im.paste(_light_tint(p.crop((0, 0, W, photo_h))), (0, TOP))
+    else:
+        d.rectangle([0, TOP, W, TOP + photo_h], fill=(214, 228, 244))
+    d.rectangle([0, TOP - 4, W, TOP], fill=BLUE)
+    d.rectangle([0, TOP + photo_h, W, TOP + photo_h + 4], fill=BLUE)
 
-    _ar(d, (right, 175), org, f_org, FG)
+    # content
+    y = TOP + photo_h + 54
+    _ar(d, (W - M, y), "فرصة عمل", _font("Tajawal-Bold.ttf", 32), BLUE)
+    y += LABEL
+    _ar(d, (W - M, y), org, _font("Tajawal-Regular.ttf", 38), GREY)
+    y += ORG
+    for ln in lines:
+        _ar(d, (W - M, y), ln, ft, DARK)
+        y += size + 14
 
-    # title, wrapped
-    y = 275
-    for line in _wrap_rtl(d, title, f_title, W - 2 * MARGIN)[:2]:
-        _ar(d, (right, y), line, f_title, FG)
-        y += 78
-
-    # meta block
-    y = max(y + 20, 470)
+    # meta
+    d.rectangle([M, rule_y, W - M, rule_y + 2], fill=RULE)
+    my = rule_y + 22
     if loc:
-        _ar(d, (right, y), f"الموقع: {loc}", f_meta, FG)
-        y += 55
-    _ar(d, (right, y), f"آخر موعد: {closing}", f_meta, ACCENT)
+        _ar(d, (W - M, my), f"الموقع:  {loc}", _font("Tajawal-Regular.ttf", 36), DARK)
+        my += 54
+    if closing:
+        _ar(d, (W - M, my), f"آخر موعد للتقديم:  {closing}",
+            _font("Tajawal-Bold.ttf", 36), BLUE)
 
-    img.save(out_path, "PNG", optimize=True)
+    # footer
+    d.rectangle([0, fy, W, H], fill=BLUE)
+    _ar(d, (W - M, fy + 26), TAGLINE, _font("Tajawal-Bold.ttf", 34), WHITE)
+    for i in range(3):
+        cx = M + 26 + i * 44
+        d.ellipse([cx - 8, fy + 40, cx + 8, fy + 56], fill=WHITE)
+
+    im.save(out_path, "PNG", optimize=True)
     return out_path
-
-
-if __name__ == "__main__":
-    # local smoke test
-    jobs = [
-        {"org": "UNHCR", "org_ar": "المفوضية السامية للأمم المتحدة لشؤون اللاجئين",
-         "title": "Senior Government Liaison Assistant",
-         "title_ar": "مساعد أول لشؤون الاتصال الحكومي (فئة الخدمات العامة) ر.ع-5",
-         "location": "Khartoum", "location_ar": "الخرطوم، السودان",
-         "closing": "29 يوليو 2026", "org_slug": "unhcr"},
-        {"org": "World Food Programme", "org_ar": "برنامج الأغذية العالمي",
-         "title": "Finance Officer", "title_ar": "موظف شؤون مالية — للسودانيين فقط",
-         "location": "Khartoum", "location_ar": "الخرطوم، السودان",
-         "closing": "4 أغسطس 2026", "org_slug": "wfp"},
-    ]
-    for i, j in enumerate(jobs):
-        p = build_card(j, f"sample_{i}.png")
-        print("wrote", p)
-     
