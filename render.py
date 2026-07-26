@@ -170,53 +170,46 @@ def build_card(job, out_path):
         _ar(d, (W - M, 70), "تقديم للوظائف", _font("Tajawal-Bold.ttf", 46), BLUE)
     d.rectangle([0, 0, 16, 190], fill=BLUE)
 
-    # measure text first; the photo takes whatever height is left
-    fy, TOP = H - 96, 210
-    rule_y = fy - 150
-    LABEL, ORG = 50, 62
+    # double rule under the header
+    d.rectangle([M, 196, W - M, 200], fill=BLUE)
+    d.rectangle([M, 208, W - M, 210], fill=BLUE)
 
-    for size in (76, 70, 64, 58, 52, 46, 40):
+    fy = H - 96
+    rule_y = fy - 160
+    LABEL, ORG = 56, 70
+
+    # title sized to the space available between header and meta rule
+    top = 300
+    budget = rule_y - top - LABEL - ORG - 40
+    for size in (104, 94, 84, 76, 68, 60, 52, 46):
         ft = _font("Tajawal-Bold.ttf", size)
-        lines = _wrap(d, title, ft, W - 2 * M)[:3]
-        text_h = LABEL + ORG + len(lines) * (size + 14)
-        photo_h = rule_y - 24 - TOP - text_h - 54
-        if photo_h >= 240:
+        lines = _wrap(d, title, ft, W - 2 * M)
+        if len(lines) <= 4 and len(lines) * (size + 20) <= budget:
             break
-    photo_h = max(200, photo_h)
+    lines = lines[:4]
 
-    # photo band
-    bg = _pick_background(job)
-    if bg:
-        p = Image.open(bg).convert("RGB")
-        r = max(W / p.width, photo_h / p.height)
-        p = p.resize((int(p.width * r) + 1, int(p.height * r) + 1))
-        im.paste(_light_tint(p.crop((0, 0, W, photo_h))), (0, TOP))
-    else:
-        d.rectangle([0, TOP, W, TOP + photo_h], fill=(214, 228, 244))
-    d.rectangle([0, TOP - 4, W, TOP], fill=BLUE)
-    d.rectangle([0, TOP + photo_h, W, TOP + photo_h + 4], fill=BLUE)
-
-    # content
-    y = TOP + photo_h + 54
-    _ar(d, (W - M, y), "فرصة عمل", _font("Tajawal-Bold.ttf", 32), BLUE)
+    y = top
+    _ar(d, (W - M, y), "فرصة عمل", _font("Tajawal-Bold.ttf", 34), BLUE)
     y += LABEL
-    _ar(d, (W - M, y), org, _font("Tajawal-Regular.ttf", 38), GREY)
+    _ar(d, (W - M, y), org, _font("Tajawal-Regular.ttf", 42), GREY)
     y += ORG
     for ln in lines:
         _ar(d, (W - M, y), ln, ft, DARK)
-        y += size + 14
+        y += size + 20
 
-    # meta
-    d.rectangle([M, rule_y, W - M, rule_y + 2], fill=RULE)
-    my = rule_y + 22
+    # meta, above a double rule
+    d.rectangle([M, rule_y, W - M, rule_y + 3], fill=RULE)
+    d.rectangle([M, rule_y + 11, W - M, rule_y + 13], fill=RULE)
+    my = rule_y + 34
     if loc:
-        _ar(d, (W - M, my), f"الموقع:  {loc}", _font("Tajawal-Regular.ttf", 36), DARK)
-        my += 54
+        _ar(d, (W - M, my), f"الموقع:  {loc}", _font("Tajawal-Regular.ttf", 38), DARK)
+        my += 58
     if closing:
         _ar(d, (W - M, my), f"آخر موعد للتقديم:  {closing}",
-            _font("Tajawal-Bold.ttf", 36), BLUE)
+            _font("Tajawal-Bold.ttf", 38), BLUE)
 
-    # footer
+    # footer, with a double keyline above it
+    d.rectangle([0, fy - 14, W, fy - 11], fill=BLUE)
     d.rectangle([0, fy, W, H], fill=BLUE)
     _ar(d, (W - M, fy + 26), TAGLINE, _font("Tajawal-Bold.ttf", 34), WHITE)
     for i in range(3):
