@@ -65,6 +65,10 @@ ORGS = {
     "drc": "المجلس الدنماركي للاجئين",
     "irc": "لجنة الإنقاذ الدولية",
     "crs": "منظمة الإغاثة الكاثوليكية",
+    "sudani": "سوداني",
+    "zain": "زين",
+    "mtn": "إم تي إن",
+    "bank of khartoum": "بنك الخرطوم",
 }
 
 # --------------------------------------------------------------------------
@@ -122,6 +126,19 @@ ROLES = {
     "clerk": "كاتب",
     "cleaner": "عامل نظافة",
     "lead": "قائد",
+    "professional": "أخصائي",
+    "agent": "موظف",
+    "call center agent": "موظف مركز اتصال",
+    "generalist": "أخصائي عام",
+    "architect": "مهندس معماري",
+    "administrator": "مسؤول",
+    "representative": "مندوب",
+    "planner": "مخطط",
+    "controller": "مراقب",
+    "operator": "مشغل",
+    "welder": "لحام",
+    "carpenter": "نجار",
+    "plumber": "سباك",
 }
 
 # --------------------------------------------------------------------------
@@ -209,6 +226,51 @@ DOMAINS = {
     "hr": "الموارد البشرية",
     "ict": "تقنية المعلومات والاتصالات",
     "it": "تقنية المعلومات",
+    "data center operations": "عمليات مراكز البيانات",
+    "infrastructure management": "إدارة البنية التحتية",
+    "business assurance": "ضمان الأعمال",
+    "strategic communications": "الاتصال المؤسسي",
+    "general ledger": "الأستاذ العام",
+    "cloud": "الحوسبة السحابية",
+    "infrastructure": "البنية التحتية",
+    "network": "الشبكات",
+    "networks": "الشبكات",
+    "telecom": "الاتصالات",
+    "marketing": "التسويق",
+    "sales": "المبيعات",
+    "billing": "الفوترة",
+    "revenue": "الإيرادات",
+    "budgeting": "الميزانية",
+    "treasury": "الخزينة",
+    "tax": "الضرائب",
+    "power": "الطاقة",
+    "workshop": "الورشة",
+    "contact center": "مركز الاتصال",
+    "call center": "مركز الاتصال",
+    "customer service": "خدمة العملاء",
+    "customer experience": "تجربة العملاء",
+    "measurement": "القياس",
+    "creative arts": "الفنون الإبداعية",
+    "pmo": "مكتب إدارة المشاريع",
+    "geo": "النظم الجغرافية",
+    "country": "القطري",
+    "liaison": "الاتصال",
+    "government": "الحكومي",
+    "training": "التدريب",
+    "quality": "الجودة",
+    "gender": "النوع الاجتماعي",
+    "youth": "الشباب",
+    "disability": "الإعاقة",
+    "environment": "البيئة",
+    "energy": "الطاقة",
+    "media": "الإعلام",
+    "office": "المكتب",
+    "safety": "السلامة",
+    "records": "السجلات",
+    "assets": "الأصول",
+    "budget": "الميزانية",
+    "payroll": "الرواتب",
+    "recruitment": "التوظيف",
 }
 
 PLACES = {
@@ -314,6 +376,15 @@ def translate_title(s):
     work = GRADE_RE.sub(" ", work)
     work = re.sub(r"\([^)]*\)", " ", work)
 
+    # prefixes that must precede the role noun in Arabic
+    prefix = suffix = ""
+    if re.search(r"(?<![A-Za-z])deputy(?![A-Za-z])", work, re.I):
+        prefix = "نائب"
+        work = _strip(work, "deputy")
+    if re.search(r"(?<![A-Za-z])acting(?![A-Za-z])", work, re.I):
+        suffix = "بالإنابة"
+        work = _strip(work, "acting")
+
     role, role_en = _find_first(work, ROLES)
     if not role:
         return s, False
@@ -335,9 +406,17 @@ def translate_title(s):
     parts = [role]
     if senior:
         parts.append(senior)
-    parts.extend(domains)
+    head = " ".join(parts)
 
-    out = " ".join(parts)
+    if domains:
+        head += " " + " - ".join(domains)
+    out = head
+
+    # "deputy" is a construct-state prefix in Arabic, not a suffix modifier
+    if prefix:
+        out = prefix + " " + out
+    if suffix:
+        out = out + " " + suffix
     if grades:
         out += " " + " ".join(g.upper().replace(" ", "-") for g in grades)
 
@@ -378,3 +457,4 @@ def enrich(j):
     if not j.get("closing_ar"):
         j["closing_ar"] = translate_date(j["closing"])
     return j
+    
