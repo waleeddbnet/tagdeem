@@ -342,6 +342,141 @@ def sudancareer():
     return out
 
 
+# --------------------------------------------------------------------------
+# for6aforjobs.com - Blogger. Strong private-sector coverage: Zain, MTN,
+# Sudani, DAL, Bank of Khartoum, QNB, Arak, call centres, banks.
+# Titles are already Arabic, so no translation is applied to them.
+# --------------------------------------------------------------------------
+F6_FEED = "https://www.for6aforjobs.com/feeds/posts/default"
+
+# Labels we publish. Everything else is ignored.
+F6_INCLUDE = {
+    "وظائف سودانية", "وظائف البنوك", "وظائف بنك الخرطوم", "بنك قطر الوطني",
+    "وظائف شركة زين", "وظائف شركة سوداني", "شركة MTN", "وظائف شركة دال",
+    "وظائف دال", "مجموعة اراك", "وظائف شركة مروج", "وظائف كول سنتر",
+    "وظائف تقنية", "وظائف طبية", "وظائف الجامعات", "شركات طيران",
+    "وظائف سائقين", "وظائف الولايات",
+}
+
+# Never publish these. Military and police recruitment for a party to an
+# active armed conflict is not the same thing as a civilian job advert, and
+# carries real risk for the page and its operator.
+F6_EXCLUDE = {
+    "تجنيد القوات المسلحة", "تجنيد الشرطة", "خدمة وطنية",
+}
+
+# "... | <ORG> تعلن عن وظيفة <TITLE>"   /   "... | مطلوب <TITLE> للعمل ..."
+_F6_ANNOUNCE = re.compile(
+    r"\|\s*(?P<org>.+?)\s+تعلن\s+عن\s+(?:وظيفة|وظائف)\s+(?P<title>.+?)\s*$")
+_F6_WANTED = re.compile(r"\|\s*مطلوب\s+(?P<title>.+?)(?:\s+للعمل\b.*)?\s*$")
+_F6_CLOSE = re.compile(
+    r"(?:آخر\s*موعد|الموعد\s*النهائي|ينتهي\s*التقديم|آخر\s*يوم)"
+    r"[^0-9]{0,20}(\d{1,2}\s*[/\-]?\s*[\u0600-\u06FFA-Za-z]{3,12}\s*[/\-]?\s*\d{4}"
+    r"|\d{1,2}[/-]\d{1,2}[/-]\d{4})")
+
+
+_AR_MON = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
+           "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"]
+
+
+def _f6_date(s):
+    """Turn 05/08/2026 into 5 أغسطس 2026. Leave Arabic dates alone."""
+    if not s:
+        return s
+    m = re.match(r"^\s*(\d{1,2})[/-](\d{1,2})[/-](\d{4})", s)
+    if m:
+        d, mo, y = int(m.group(1)), int(m.group(2)), m.group(3)
+        if 1 <= mo <= 12:
+            return f"{d} {_AR_MON[mo-1]} {y}"
+    return s
+
+
+def _f6_parse(title_raw, labels, content, url, ident):
+    t = re.sub(r"\s+", " ", title_raw).strip()
+
+    org, title = "", t
+
+    # reversed form: "<TITLE> 2026 | وظائف <ORG>"
+    m = re.search(r"^(?P<title>.+?)\s*\|\s*وظائف\s+(?P<org>.+?)\s*$", t)
+    if m and "تعلن" not in t and "مطلوب" not in t:
+        title = re.sub(r"^[^\u0600-\u06FFA-Za-z]+", "", m.group("title"))
+        title = re.sub(r"^(?:فرصة\s+عمل|وظيفة|وظائف)\s*", "", title)
+        title = re.sub(r"\s*\d{4}\s*$", "", title).strip()
+        org = m.group("org").strip()
+        loc0 = "السودان"
+        cm0 = _F6_CLOSE.search(content or "")
+        j = job("for6a", ident, title, org, loc0,
+                cm0.group(1).strip() if cm0 else "", url)
+        j["title_ar"], j["org_ar"] = title, org
+        j["location_ar"] = loc0
+        j["closing_ar"] = _f6_date(j["closing"])
+        return j
+
+    m = _F6_ANNOUNCE.search(t)
+    if m:
+        org = m.group("org").strip()
+        title = m.group("title").strip()
+    else:
+        m = _F6_WANTED.search(t)
+        if m:
+            title = m.group("title").strip()
+            org = "غير محدد"
+        elif "|" in t:
+            title = t.split("|", 1)[1].strip()
+
+    # strip a trailing English gloss in brackets - the card shows Arabic
+    title = re.sub(r"\s*\([A-Za-z][^)]*\)\s*$", "", title).strip()
+
+    loc = next((l for l in labels if l in {
+        "بورتسودان", "مدني", "عطبرة", "دنقلا", "كسلا", "بحري", "نيالا",
+        "الابيض", "الجنينة", "الدامر", "الدمازين", "حلفا", "الشمالية",
+        "النيل الابيض", "نهر النيل", "جنوب كردفان", "شمال كردفان",
+        "شمال دارفور", "ولاية الجزيرة", "ولاية القضارف", "ولاية شمال دارفور",
+    }), "السودان")
+
+    cm = _F6_CLOSE.search(content or "")
+    closing = re.sub(r"\s+", " ", cm.group(1)).strip() if cm else ""
+
+    j = job("for6a", ident, title, org, loc, closing, url)
+    # content is already Arabic - lock it so translate.py leaves it alone
+    j["title_ar"] = title
+    j["org_ar"] = org
+    j["location_ar"] = loc
+    j["closing_ar"] = _f6_date(closing)
+    return j
+
+
+@source("for6a")
+def for6a():
+    r = requests.get(F6_FEED,
+                     params={"alt": "json", "max-results": 25},
+                     headers=UA, timeout=TIMEOUT)
+    r.raise_for_status()
+    entries = (r.json().get("feed") or {}).get("entry", []) or []
+
+    out = []
+    for e in entries:
+        labels = {c.get("term", "") for c in e.get("category", [])}
+        if labels & F6_EXCLUDE:
+            continue
+        if F6_INCLUDE and not (labels & F6_INCLUDE):
+            continue
+
+        url = next((l.get("href") for l in e.get("link", [])
+                    if l.get("rel") == "alternate"), "")
+        if not url:
+            continue
+        ident = url.rstrip("/").split("/")[-1].replace(".html", "")
+        title_raw = (e.get("title") or {}).get("$t", "")
+        content = re.sub(r"<[^>]+>", " ",
+                         (e.get("content") or e.get("summary") or {}).get("$t", ""))
+
+        j = _f6_parse(title_raw, labels, content, url, ident)
+        if j["title"] and len(j["title"]) > 3:
+            out.append(j)
+    return out
+
+
 def collect():
     """Run every enabled source. One failure never kills the run."""
     all_jobs, errors = [], []
@@ -356,4 +491,4 @@ def collect():
             print(f"  {name}: FAILED {type(e).__name__}: {e}")
             errors.append(name)
     return all_jobs, errors
-        
+    
