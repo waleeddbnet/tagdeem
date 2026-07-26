@@ -16,6 +16,7 @@ Preference order when adding an org career site:
 """
 import hashlib
 import re
+from datetime import date, datetime
 
 import requests
 from bs4 import BeautifulSoup
@@ -56,9 +57,47 @@ def job(src, ext_id, title, org, location, closing, url, org_slug=""):
     }
 
 
+_DATE_FORMATS = [
+    "%d %B %Y", "%d %b %Y", "%B %d %Y", "%b %d %Y",
+    "%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%d.%m.%Y",
+]
+
+
+def parse_closing(s):
+    """Parse a closing date string. Returns date or None if unparseable."""
+    if not s:
+        return None
+    t = re.sub(r"[,]", " ", s).strip()
+    t = re.sub(r"(\d+)(st|nd|rd|th)", r"\1", t, flags=re.I)
+    t = re.sub(r"\s+", " ", t)
+    for f in _DATE_FORMATS:
+        try:
+            return datetime.strptime(t, f).date()
+        except ValueError:
+            continue
+    return None
+
+
 def valid(j):
-    """Never publish a partial record."""
-    return all([j["title"], j["org"], j["closing"]])
+    """Never publish a partial record, or one whose deadline has passed.
+
+    A missing closing date is tolerated - some sites (e.g. corporate career
+    pages) simply do not publish one. A closing date that is present but in
+    the past is always rejected.
+    """
+    if not all([j["title"], j["org"]]):
+        return False
+    if not j["closing"]:
+        return True
+
+    d = parse_closing(j["closing"])
+    if d is None:
+        # unparseable date - post it, the text is shown verbatim anyway
+        return True
+    if d < date.today():
+        print(f"  EXPIRED {j['key']} closed {d}")
+        return False
+    return True
 
 
 # --------------------------------------------------------------------------
@@ -163,6 +202,48 @@ def manual():
         j["title_ar"] = r.get("title_ar", "")
         j["org_ar"] = r.get("org_ar", "")
         j["location_ar"] = r.get("location_ar", "")
+        out.append(j)
+    return out
+
+
+# --------------------------------------------------------------------------
+# sudani.sd - WordPress + jobsearch plugin. Corporate careers page.
+# No closing date published; only a post date. closing is left empty.
+# --------------------------------------------------------------------------
+@source("sudani")
+def sudani():
+    html = requests.get("https://sudani.sd/careers/", headers=UA,
+                        timeout=TIMEOUT).text
+    soup = BeautifulSoup(html, "html.parser")
+    out, seen = [], set()
+
+    for a in soup.find_all("a", href=re.compile(r"/job/[^/]+/?$")):
+        href = a.get("href", "")
+        m = re.search(r"/job/([^/?#]+)", href)
+        if not m:
+            continue
+        slug = m.group(1)
+        if slug in seen:
+            continue
+
+        title = (a.get("title") or a.get_text(" ", strip=True)).strip()
+        if not title or len(title) < 3:
+            continue
+        seen.add(slug)
+
+        # category link looks like /technology-jobs/ , /finance-jobs/
+        cat = ""
+        block = a.find_parent(["li", "div", "article"]) or a.parent
+        if block:
+            c = block.find("a", href=re.compile(r"/[a-z\-]+-jobs/?$"))
+            if c:
+                cat = c.get_text(" ", strip=True)
+
+        j = job("sudani", slug, title, "Sudani",
+                "Sudan", "",
+                f"https://sudani.sd/job/{slug}/",
+                org_slug="sudani")
+        j["category"] = cat
         out.append(j)
     return out
 
