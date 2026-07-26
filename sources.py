@@ -53,7 +53,7 @@ def job(src, ext_id, title, org, location, closing, url, org_slug=""):
         "org_slug": org_slug or _norm(org)[:24],
         "location": location.strip().rstrip(". "),
         "closing": closing.strip(),
-        "url": url,
+        "url": url.rstrip("/"),
     }
 
 
@@ -262,3 +262,4 @@ def collect():
             print(f"  {name}: FAILED {type(e).__name__}: {e}")
             errors.append(name)
     return all_jobs, errors
+    
