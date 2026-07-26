@@ -1,25 +1,19 @@
 #!/usr/bin/env python3
 """
-Tagdeem card renderer.
+Tagdeem card renderer - typographic layout.
 
-Light layout: white ground, brand blue accents, photo band with a bright
-blue tint, Arabic type. One consistent design for every organisation.
-
-The photo band is the flexible element - text is measured first and the
-photo takes whatever height remains. This is what prevents long titles
-from colliding with the meta block.
+White ground, brand blue accents, no photography. One consistent design
+for every organisation. Title is sized to the space available so it never
+collides with the meta block.
 
 Files expected in the repo:
     fonts/Tajawal-Bold.ttf
     fonts/Tajawal-Regular.ttf
-    logos/page.png          your page logo, transparent PNG
-    backgrounds/*.jpg       photos; <category>.jpg or default.jpg
+    logos/page.png        your page logo, transparent PNG (optional)
 """
-import glob
 import os
-import random
 
-from PIL import Image, ImageDraw, ImageFont, ImageOps, features
+from PIL import Image, ImageDraw, ImageFont, features
 
 import translate
 
@@ -27,7 +21,6 @@ W = H = 1080
 M = 78
 FONTS = "fonts"
 LOGOS = "logos"
-BACKGROUNDS = "backgrounds"
 
 BLUE  = (7, 74, 153)
 DARK  = (23, 35, 54)
@@ -41,7 +34,7 @@ TAGLINE = "شركاؤك في الوصول"
 def _assert_raqm():
     if not features.check("raqm"):
         raise RuntimeError(
-            "Pillow lacks RAQM - Arabic will not shape correctly. "
+            "Pillow lacks RAQM - Arabic will not shape. "
             "Install libraqm (apt: libraqm0)."
         )
 
@@ -68,80 +61,6 @@ def _wrap(d, text, f, maxw):
     if cur:
         lines.append(cur)
     return lines
-
-
-# --------------------------------------------------------------------------
-# Category detection -> background image choice
-# --------------------------------------------------------------------------
-CATEGORIES = [
-    ("health",      ["nurse", "midwife", "doctor", "medical", "clinic", "health",
-                     "pharmacist", "nutrition", "surgeon", "lab"]),
-    ("education",   ["teacher", "education", "school", "training", "trainer",
-                     "curriculum", "learning"]),
-    ("it",          ["software", "developer", "cloud", "infrastructure", "network",
-                     "database", "cyber", "ict", "data center", "devops",
-                     "system", "technology", "digital"]),
-    ("finance",     ["finance", "account", "budget", "audit", "ledger", "payroll",
-                     "treasury", "tax", "cashier", "grants"]),
-    ("logistics",   ["logistic", "supply chain", "warehouse", "storekeeper",
-                     "procurement", "fleet", "transport", "inventory"]),
-    ("driver",      ["driver", "mechanic", "vehicle"]),
-    ("engineering", ["engineer", "technician", "electrician", "construction",
-                     "workshop", "power", "maintenance"]),
-    ("wash",        ["wash", "water", "sanitation", "hygiene", "borehole"]),
-    ("agriculture", ["agricultur", "livelihood", "farm", "veterinary", "food security"]),
-    ("protection",  ["protection", "gbv", "child", "psychosocial", "social worker",
-                     "case management", "counsel", "legal"]),
-    ("security",    ["security", "safety", "guard", "access"]),
-    ("marketing",   ["marketing", "communication", "media", "creative", "design",
-                     "brand", "advocacy"]),
-    ("callcenter",  ["call center", "contact center", "customer service", "agent"]),
-    ("hr",          ["human resources", "recruitment", "personnel", "talent"]),
-    ("admin",       ["admin", "office", "clerk", "receptionist", "secretary",
-                     "assistant", "coordinator", "data entry"]),
-    ("management",  ["director", "manager", "head of", "chief", "lead", "officer"]),
-]
-
-
-def detect_category(job):
-    hay = (job.get("title", "") + " " + job.get("category", "")).lower()
-    for slug, keys in CATEGORIES:
-        if any(k in hay for k in keys):
-            return slug
-    return None
-
-
-def _bg_file(name):
-    for ext in (".jpg", ".jpeg", ".png"):
-        p = os.path.join(BACKGROUNDS, name + ext)
-        if os.path.exists(p):
-            return p
-    return None
-
-
-def _pick_background(job=None):
-    if job:
-        cat = detect_category(job)
-        if cat:
-            p = _bg_file(cat)
-            if p:
-                return p
-    p = _bg_file("default")
-    if p:
-        return p
-    files = glob.glob(os.path.join(BACKGROUNDS, "*.jpg")) + \
-            glob.glob(os.path.join(BACKGROUNDS, "*.png"))
-    return random.choice(files) if files else None
-
-
-def _light_tint(img):
-    """Bright airy blue tint. Lifts tones first so nothing reads as gloomy."""
-    g = ImageOps.grayscale(img)
-    g = ImageOps.autocontrast(g, cutoff=3)
-    g = g.point(lambda v: min(255, int(70 + v * 0.86)))
-    return ImageOps.colorize(g, black=(31, 82, 150), mid=(126, 168, 214),
-                             white=(255, 255, 255),
-                             blackpoint=0, midpoint=128, whitepoint=255)
 
 
 def _text_fields(job):
@@ -178,7 +97,7 @@ def build_card(job, out_path):
     rule_y = fy - 160
     LABEL, ORG = 56, 70
 
-    # title sized to the space available between header and meta rule
+    # size the title to the space between header and meta rule
     top = 300
     budget = rule_y - top - LABEL - ORG - 40
     for size in (104, 94, 84, 76, 68, 60, 52, 46):
@@ -197,7 +116,7 @@ def build_card(job, out_path):
         _ar(d, (W - M, y), ln, ft, DARK)
         y += size + 20
 
-    # meta, above a double rule
+    # meta above a double rule
     d.rectangle([M, rule_y, W - M, rule_y + 3], fill=RULE)
     d.rectangle([M, rule_y + 11, W - M, rule_y + 13], fill=RULE)
     my = rule_y + 34
@@ -208,7 +127,7 @@ def build_card(job, out_path):
         _ar(d, (W - M, my), f"آخر موعد للتقديم:  {closing}",
             _font("Tajawal-Bold.ttf", 38), BLUE)
 
-    # footer, with a double keyline above it
+    # footer with a double keyline above
     d.rectangle([0, fy - 14, W, fy - 11], fill=BLUE)
     d.rectangle([0, fy, W, H], fill=BLUE)
     _ar(d, (W - M, fy + 26), TAGLINE, _font("Tajawal-Bold.ttf", 34), WHITE)
@@ -218,3 +137,4 @@ def build_card(job, out_path):
 
     im.save(out_path, "PNG", optimize=True)
     return out_path
+    
