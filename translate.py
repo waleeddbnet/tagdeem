@@ -65,6 +65,22 @@ ORGS = {
     "drc": "المجلس الدنماركي للاجئين",
     "irc": "لجنة الإنقاذ الدولية",
     "crs": "منظمة الإغاثة الكاثوليكية",
+    "sos children's villages": "منظمة القرى الأطفال",
+    "sos childrens villages": "قرى الأطفال",
+    "premiere urgence internationale": "بروميير أورجونس الدولية",
+    "premiere urgence": "بروميير أورجونس",
+    "relief international": "منظمة الإغاثة الدولية",
+    "solidarites international": "سوليدارتيه الدولية",
+    "triangle generation humanitaire": "منظمة ترايانغل",
+    "people in need": "منظمة الناس في حاجة",
+    "cooperazione internazionale": "منظمة كوبي الدولية",
+    "handicap international": "منظمة الإعاقة الدولية",
+    "humanity & inclusion": "منظمة الإنسانية والإدماج",
+    "malteser international": "منظمة مالتيزر الدولية",
+    "war child": "منظمة أطفال الحرب",
+    "alight": "منظمة ألايت",
+    "zoa": "منظمة زوا",
+    "acted": "منظمة أكتد",
     "sudani": "سوداني",
     "zain": "زين",
     "mtn": "إم تي إن",
@@ -77,6 +93,12 @@ ORGS = {
 ROLES = {
     "chief of party": "رئيس المشروع",
     "head of office": "رئيس المكتب",
+    "head of mission": "رئيس البعثة",
+    "head of programmes": "رئيس البرامج",
+    "head of programs": "رئيس البرامج",
+    "head of department": "رئيس القسم",
+    "head of unit": "رئيس الوحدة",
+    "head of": "رئيس",
     "head of mission": "رئيس البعثة",
     "team leader": "قائد فريق",
     "focal point": "منسق",
@@ -253,6 +275,10 @@ DOMAINS = {
     "creative arts": "الفنون الإبداعية",
     "pmo": "مكتب إدارة المشاريع",
     "geo": "النظم الجغرافية",
+    "humanitarian": "الشؤون الإنسانية",
+    "pharmacy": "الصيدلة",
+    "midwifery": "القبالة",
+    "primary health care": "الرعاية الصحية الأولية",
     "country": "القطري",
     "liaison": "الاتصال",
     "government": "الحكومي",
@@ -396,7 +422,7 @@ def translate_title(s):
 
     domains = []
     remaining = work
-    while len(domains) < 2:
+    while len(domains) < 3:
         dom, dom_en = _find_first(remaining, DOMAINS)
         if not dom:
             break
@@ -428,9 +454,13 @@ def translate_title(s):
     return out, True
 
 
+_ORG_TAIL = re.compile(
+    r"\s*[-–|]?\s*(sudan|south sudan|khartoum|sd)\s*$", re.I)
+
+
 def translate_org(s):
-    out, hits = _sub_all(s, ORGS)
-    return out, bool(hits)
+    out, hits = _sub_all(_ORG_TAIL.sub("", s), ORGS)
+    return out.strip(), bool(hits)
 
 
 def translate_place(s):
@@ -457,4 +487,3 @@ def enrich(j):
     if not j.get("closing_ar"):
         j["closing_ar"] = translate_date(j["closing"])
     return j
-    
