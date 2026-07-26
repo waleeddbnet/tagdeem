@@ -22,6 +22,10 @@ import requests
 from bs4 import BeautifulSoup
 
 UA = {"User-Agent": "Mozilla/5.0 (compatible; job-relay/1.0)"}
+
+# ReliefWeb requires a pre-approved appname since Nov 2025. Request one at
+# https://reliefweb.int/help/api then put it here and set enabled=True below.
+RELIEFWEB_APPNAME = "tagdeem"
 TIMEOUT = 30
 
 SOURCES = {}
@@ -38,10 +42,23 @@ def _norm(s):
     return re.sub(r"[^a-z0-9]", "", (s or "").lower())
 
 
+def _canon_org(org):
+    """Map an org name to its canonical form so 'CRS' and 'Catholic Relief
+    Services' fingerprint identically. Falls back to the raw name."""
+    try:
+        import translate
+        ar, ok = translate.translate_org(org)
+        if ok:
+            return ar
+    except Exception:
+        pass
+    return _norm(org)
+
+
 def job(src, ext_id, title, org, location, closing, url, org_slug=""):
     """Normalized record. `fp` is a cross-source fingerprint for dedup."""
     fp = hashlib.sha1(
-        f"{_norm(org)}|{_norm(title)}|{_norm(closing)}".encode()
+        f"{_canon_org(org)}|{_norm(title)}|{_norm(closing)}".encode()
     ).hexdigest()[:16]
     return {
         "source": src,
@@ -140,19 +157,23 @@ def sudanjob():
 # ReliefWeb - official public API, no key, no scraping
 # Flip enabled=True when ready.
 # --------------------------------------------------------------------------
-@source("reliefweb", enabled=False)
+@source("reliefweb")
 def reliefweb():
+    """
+    ReliefWeb API v2. NOTE: since 1 Nov 2025 the `appname` must be
+    pre-approved by ReliefWeb - request one at https://reliefweb.int/help/api
+    before enabling this source, otherwise requests are rejected.
+    """
     r = requests.get(
-        "https://api.reliefweb.int/v1/jobs",
+        "https://api.reliefweb.int/v2/jobs",
         params={
-            "appname": "sudan-job-relay",
-            "profile": "list",
+            "appname": RELIEFWEB_APPNAME,
             "limit": 40,
-            "sort[]": "date:desc",
+            "sort[]": "date.created:desc",
             "filter[field]": "country.iso3",
             "filter[value]": "sdn",
             "fields[include][]": ["title", "source.name", "country.name",
-                                  "date.closing", "url"],
+                                  "city.name", "date.closing", "url"],
         },
         headers=UA, timeout=TIMEOUT,
     )
@@ -160,11 +181,12 @@ def reliefweb():
     out = []
     for item in r.json().get("data", []):
         f = item["fields"]
+        loc = ", ".join(c["name"] for c in f.get("city", [])) or \
+              ", ".join(c["name"] for c in f.get("country", []))
         out.append(job(
             "reliefweb", item["id"], f.get("title", ""),
             (f.get("source") or [{}])[0].get("name", ""),
-            ", ".join(c["name"] for c in f.get("country", [])),
-            (f.get("date") or {}).get("closing", "")[:10],
+            loc, (f.get("date") or {}).get("closing", "")[:10],
             f.get("url", ""),
         ))
     return out
@@ -248,6 +270,78 @@ def sudani():
     return out
 
 
+# --------------------------------------------------------------------------
+# sudancareer.com - WordPress. Titles are formatted:
+#     "Senior Procurement Officer (Madani) - CRS"
+# so org and location fall out of the title itself.
+# Tries the WP REST API first, falls back to HTML.
+# --------------------------------------------------------------------------
+_SC_TITLE = re.compile(r"^(?P<title>.+?)\s*(?:\((?P<loc>[^)]*)\))?\s*[-–—]\s*(?P<org>[^-–—]+)$")
+_SC_CLOSE = re.compile(
+    r"(?:closing\s*date|apply\s*before|deadline|advertisement\s*end\s*date)\s*:?\s*"
+    r"([0-9]{1,2}[/ -][A-Za-z0-9]{2,9}[/ -][0-9]{2,4}|[A-Za-z]{3,9}\s+[0-9]{1,2},?\s*[0-9]{4})",
+    re.I)
+
+
+def _sc_parse(title_raw, excerpt, url, ident):
+    m = _SC_TITLE.match(title_raw.strip())
+    if m:
+        title = m.group("title").strip()
+        org = m.group("org").strip()
+        loc = (m.group("loc") or "").strip()
+    else:
+        title, org, loc = title_raw.strip(), "", ""
+    if not loc:
+        loc = "Sudan"
+    cm = _SC_CLOSE.search(excerpt or "")
+    closing = cm.group(1).strip() if cm else ""
+    return job("sudancareer", ident, title, org, loc, closing, url)
+
+
+@source("sudancareer")
+def sudancareer():
+    out = []
+    # preferred: WordPress REST API
+    try:
+        r = requests.get("https://sudancareer.com/wp-json/wp/v2/posts",
+                         params={"per_page": 30, "_fields": "id,link,title,excerpt"},
+                         headers=UA, timeout=TIMEOUT)
+        if r.status_code == 200:
+            for post in r.json():
+                t = re.sub(r"<[^>]+>", "", post["title"]["rendered"])
+                e = re.sub(r"<[^>]+>", " ", post.get("excerpt", {}).get("rendered", ""))
+                t = (t.replace("&#8211;", "-").replace("&amp;", "&")
+                       .replace("&nbsp;", " ").replace("&#038;", "&"))
+                j = _sc_parse(t, e, post["link"], post["id"])
+                if j["org"]:
+                    out.append(j)
+            if out:
+                return out
+    except Exception:
+        pass
+
+    # fallback: HTML listing
+    html = requests.get("https://sudancareer.com/", headers=UA, timeout=TIMEOUT).text
+    soup = BeautifulSoup(html, "html.parser")
+    seen = set()
+    for h in soup.find_all(["h2", "h3"]):
+        a = h.find("a", href=True)
+        if not a or "/jobs/" in a["href"] or a["href"].rstrip("/").endswith(".com"):
+            continue
+        url = a["href"]
+        if url in seen:
+            continue
+        seen.add(url)
+        title_raw = a.get("title") or a.get_text(" ", strip=True)
+        block = h.find_parent(["article", "div"])
+        excerpt = block.get_text(" ", strip=True) if block else ""
+        ident = url.rstrip("/").split("/")[-1]
+        j = _sc_parse(title_raw, excerpt, url, ident)
+        if j["org"]:
+            out.append(j)
+    return out
+
+
 def collect():
     """Run every enabled source. One failure never kills the run."""
     all_jobs, errors = [], []
@@ -262,4 +356,4 @@ def collect():
             print(f"  {name}: FAILED {type(e).__name__}: {e}")
             errors.append(name)
     return all_jobs, errors
-    
+        
