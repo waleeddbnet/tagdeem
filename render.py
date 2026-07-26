@@ -1,34 +1,45 @@
 #!/usr/bin/env python3
 """
-Tagdeem card renderer - typographic layout.
+Tagdeem card renderer - Sudanese heritage template.
 
-White ground, brand blue accents, no photography. One consistent design
-for every organisation. Title is sized to the space available so it never
-collides with the meta block.
+The template PNG carries the page logo, ornament borders, the location and
+deadline labels with their icons, and the footer bar. This module composites
+only the job-specific text onto it, plus an org logo when one is available.
+
+To change the whole design, replace template.png - no code change needed.
+Text positions are the constants below.
 
 Files expected in the repo:
+    template.png              1024x1024 background
     fonts/Tajawal-Bold.ttf
     fonts/Tajawal-Regular.ttf
-    logos/page.png        your page logo, transparent PNG (optional)
+    logos/<slug>.png          optional org logos, transparent PNG
 """
 import os
+import re
 
 from PIL import Image, ImageDraw, ImageFont, features
 
 import translate
 
-W = H = 1080
-M = 78
+W = H = 1024
+TEMPLATE = "template.png"
 FONTS = "fonts"
 LOGOS = "logos"
 
-BLUE  = (7, 74, 153)
-DARK  = (23, 35, 54)
-GREY  = (122, 134, 152)
-RULE  = (223, 230, 240)
-WHITE = (255, 255, 255)
+BLUE = (8, 74, 152)
+INK  = (38, 44, 58)
+GREY = (110, 112, 110)
 
-TAGLINE = "شركاؤك في الوصول"
+# --- layout constants, tuned to the template artwork -----------------------
+CX = 512               # centre axis for the content stack
+MAXW = 700             # text wrap width
+TOP, BOTTOM = 216, 545  # vertical band available for the content stack
+BADGE_R = 52
+
+LOC_VALUE_X, LOC_Y = 742, 570      # values sit left of the template's labels
+CLOSE_VALUE_X, CLOSE_Y = 556, 652
+# ---------------------------------------------------------------------------
 
 
 def _assert_raqm():
@@ -43,7 +54,7 @@ def _font(name, size):
     return ImageFont.truetype(os.path.join(FONTS, name), size)
 
 
-def _ar(d, xy, t, f, fill, anchor="ra"):
+def _ar(d, xy, t, f, fill, anchor="ma"):
     d.text(xy, t, font=f, fill=fill, anchor=anchor,
            direction="rtl", language="ar", features=["kern", "liga"])
 
@@ -63,6 +74,24 @@ def _wrap(d, text, f, maxw):
     return lines
 
 
+def _logo_path(org_en, slug):
+    cands = [c for c in (slug,
+                         re.sub(r"[^a-z0-9]", "", (org_en or "").lower())[:24]) if c]
+    for cand in cands:
+        for ext in (".png", ".jpg", ".jpeg", ".webp"):
+            p = os.path.join(LOGOS, cand + ext)
+            if os.path.exists(p):
+                return p
+    return None
+
+
+def _paste_logo(im, path, cx, cy, r=BADGE_R):
+    lg = Image.open(path).convert("RGBA")
+    k = min((r * 2) / lg.width, (r * 2) / lg.height)
+    lg = lg.resize((max(1, int(lg.width * k)), max(1, int(lg.height * k))))
+    im.paste(lg, (cx - lg.width // 2, cy - lg.height // 2), lg)
+
+
 def _text_fields(job):
     translate.enrich(job)
     return (job.get("org_ar") or job["org"],
@@ -75,65 +104,50 @@ def build_card(job, out_path):
     _assert_raqm()
     org, title, loc, closing = _text_fields(job)
 
-    im = Image.new("RGB", (W, H), WHITE)
+    im = Image.open(TEMPLATE).convert("RGB")
     d = ImageDraw.Draw(im)
 
-    # header: logo right, blue edge mark left
-    logo_p = os.path.join(LOGOS, "page.png")
-    if os.path.exists(logo_p):
-        lg = Image.open(logo_p).convert("RGBA")
-        lw = 200
-        lg = lg.resize((lw, int(lg.height * lw / lg.width)))
-        im.paste(lg, (W - M - lw, 34), lg)
-    else:
-        _ar(d, (W - M, 70), "تقديم للوظائف", _font("Tajawal-Bold.ttf", 46), BLUE)
-    d.rectangle([0, 0, 16, 190], fill=BLUE)
+    f_lab = _font("Tajawal-Bold.ttf", 40)
+    f_org = _font("Tajawal-Bold.ttf", 36)
+    org_lines = _wrap(d, org, f_org, MAXW)[:2]
 
-    # double rule under the header
-    d.rectangle([M, 196, W - M, 200], fill=BLUE)
-    d.rectangle([M, 208, W - M, 210], fill=BLUE)
+    logo = _logo_path(job.get("org", ""), job.get("org_slug", ""))
+    badge_h = (BADGE_R * 2 + 18) if logo else 0
 
-    fy = H - 96
-    rule_y = fy - 160
-    LABEL, ORG = 56, 70
+    fixed = badge_h + 52 + len(org_lines) * 46 + 10
+    budget = BOTTOM - TOP - fixed
 
-    # size the title to the space between header and meta rule
-    top = 300
-    budget = rule_y - top - LABEL - ORG - 40
-    for size in (104, 94, 84, 76, 68, 60, 52, 46):
-        ft = _font("Tajawal-Bold.ttf", size)
-        lines = _wrap(d, title, ft, W - 2 * M)
-        if len(lines) <= 4 and len(lines) * (size + 20) <= budget:
+    for size in (62, 56, 50, 44, 38, 34):
+        f_ti = _font("Tajawal-Bold.ttf", size)
+        lines = _wrap(d, title, f_ti, MAXW)
+        if len(lines) <= 3 and len(lines) * (size + 10) <= budget:
             break
-    lines = lines[:4]
+    lines = lines[:3]
 
-    y = top
-    _ar(d, (W - M, y), "فرصة عمل", _font("Tajawal-Bold.ttf", 34), BLUE)
-    y += LABEL
-    _ar(d, (W - M, y), org, _font("Tajawal-Regular.ttf", 42), GREY)
-    y += ORG
+    stack = fixed + len(lines) * (size + 10)
+    top = TOP + max(0, (BOTTOM - TOP - stack) // 2)
+
+    if logo:
+        _paste_logo(im, logo, CX, top + BADGE_R)
+        d = ImageDraw.Draw(im)
+    y = top + badge_h
+
+    _ar(d, (CX, y), "فرصة عمل", f_lab, GREY)
+    y += 52
+    for ln in org_lines:
+        _ar(d, (CX, y), ln, f_org, BLUE)
+        y += 46
+    y += 10
     for ln in lines:
-        _ar(d, (W - M, y), ln, ft, DARK)
-        y += size + 20
+        _ar(d, (CX, y), ln, f_ti, INK)
+        y += size + 10
 
-    # meta above a double rule
-    d.rectangle([M, rule_y, W - M, rule_y + 3], fill=RULE)
-    d.rectangle([M, rule_y + 11, W - M, rule_y + 13], fill=RULE)
-    my = rule_y + 34
-    if loc:
-        _ar(d, (W - M, my), f"الموقع:  {loc}", _font("Tajawal-Regular.ttf", 38), DARK)
-        my += 58
+    # values follow the labels already printed on the template
+    _ar(d, (LOC_VALUE_X, LOC_Y), loc,
+        _font("Tajawal-Regular.ttf", 38), INK, anchor="ra")
     if closing:
-        _ar(d, (W - M, my), f"آخر موعد للتقديم:  {closing}",
-            _font("Tajawal-Bold.ttf", 38), BLUE)
-
-    # footer with a double keyline above
-    d.rectangle([0, fy - 14, W, fy - 11], fill=BLUE)
-    d.rectangle([0, fy, W, H], fill=BLUE)
-    _ar(d, (W - M, fy + 26), TAGLINE, _font("Tajawal-Bold.ttf", 34), WHITE)
-    for i in range(3):
-        cx = M + 26 + i * 44
-        d.ellipse([cx - 8, fy + 40, cx + 8, fy + 56], fill=WHITE)
+        _ar(d, (CLOSE_VALUE_X, CLOSE_Y), closing,
+            _font("Tajawal-Bold.ttf", 38), BLUE, anchor="ra")
 
     im.save(out_path, "PNG", optimize=True)
     return out_path
