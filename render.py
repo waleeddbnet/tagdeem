@@ -1,45 +1,29 @@
 #!/usr/bin/env python3
 """
-Tagdeem card renderer - Sudanese heritage template.
+Tagdeem card renderer - fully generated, no background images required.
 
-The template PNG carries the page logo, ornament borders, the location and
-deadline labels with their icons, and the footer bar. This module composites
-only the job-specific text onto it, plus an org logo when one is available.
+Every card is drawn from code. Palette, motif, frame style, label and call to
+action are chosen deterministically from the job's fingerprint, so the same
+job always looks the same while consecutive posts differ. 8 palettes x 5
+motifs x 5 frame styles.
 
-To change the whole design, replace template.png - no code change needed.
-Text positions are the constants below.
+To adjust the look, edit theme.PALETTES / theme.MOTIFS or the frame() styles.
 
 Files expected in the repo:
-    template.png              1024x1024 background
     fonts/Tajawal-Bold.ttf
     fonts/Tajawal-Regular.ttf
-    logos/<slug>.png          optional org logos, transparent PNG
+    logos/page.png        optional, your page mark
 """
 import os
-import re
 
 from PIL import Image, ImageDraw, ImageFont, features
 
+import theme
 import translate
 
-W = H = 1024
-TEMPLATE = "template.png"
 FONTS = "fonts"
 LOGOS = "logos"
-
-BLUE = (8, 74, 152)
-INK  = (38, 44, 58)
-GREY = (110, 112, 110)
-
-# --- layout constants, tuned to the template artwork -----------------------
-CX = 512               # centre axis for the content stack
-MAXW = 700             # text wrap width
-TOP, BOTTOM = 216, 545  # vertical band available for the content stack
-BADGE_R = 52
-
-LOC_VALUE_X, LOC_Y = 742, 570      # values sit left of the template's labels
-CLOSE_VALUE_X, CLOSE_Y = 556, 652
-# ---------------------------------------------------------------------------
+CARD_W, CARD_H = 1080, 1350          # portrait 4:5 - more feed space than square
 
 
 def _assert_raqm():
@@ -50,16 +34,20 @@ def _assert_raqm():
         )
 
 
-def _font(name, size):
-    return ImageFont.truetype(os.path.join(FONTS, name), size)
+def _text_fields(job):
+    translate.enrich(job)
+    return job
 
 
-def _ar(d, xy, t, f, fill, anchor="ma"):
+def F(n, s): return ImageFont.truetype(f"{FONTS}/{n}", s)
+
+
+def ar(d, xy, t, f, fill, anchor="ma"):
     d.text(xy, t, font=f, fill=fill, anchor=anchor,
            direction="rtl", language="ar", features=["kern", "liga"])
 
 
-def _wrap(d, text, f, maxw):
+def wrap(d, text, f, maxw):
     words, lines, cur = text.split(), [], ""
     for w in words:
         t = (cur + " " + w).strip()
@@ -74,81 +62,140 @@ def _wrap(d, text, f, maxw):
     return lines
 
 
-def _logo_path(org_en, slug):
-    cands = [c for c in (slug,
-                         re.sub(r"[^a-z0-9]", "", (org_en or "").lower())[:24]) if c]
-    for cand in cands:
-        for ext in (".png", ".jpg", ".jpeg", ".webp"):
-            p = os.path.join(LOGOS, cand + ext)
-            if os.path.exists(p):
-                return p
-    return None
+def _tint(c, bg, k):
+    return tuple(int(bg[i] + (c[i] - bg[i]) * k) for i in range(3))
 
 
-def _paste_logo(im, path, cx, cy, r=BADGE_R):
-    lg = Image.open(path).convert("RGBA")
-    k = min((r * 2) / lg.width, (r * 2) / lg.height)
-    lg = lg.resize((max(1, int(lg.width * k)), max(1, int(lg.height * k))))
-    im.paste(lg, (cx - lg.width // 2, cy - lg.height // 2), lg)
+def frame(im, d, W, H, style, pal, seed):
+    bg, panel, ink, accent, muted = pal
+    M = int(W * 0.055)
+
+    if style == 0:                       # full keyline frame
+        d.rectangle([M, M, W - M, H - M], outline=accent, width=4)
+        d.rectangle([M + 12, M + 12, W - M - 12, H - M - 12],
+                    outline=_tint(accent, bg, 0.35), width=2)
+
+    elif style == 1:                     # corner brackets
+        L = int(W * 0.13)
+        for cx, cy, sx, sy in ((M, M, 1, 1), (W - M, M, -1, 1),
+                               (M, H - M, 1, -1), (W - M, H - M, -1, -1)):
+            d.line([(cx, cy), (cx + sx * L, cy)], fill=accent, width=6)
+            d.line([(cx, cy), (cx, cy + sy * L)], fill=accent, width=6)
+
+    elif style == 2:                     # side band with motif
+        BW = int(W * 0.10)
+        d.rectangle([0, 0, BW, H], fill=accent)
+        fn = theme.pick(f"{seed}:motif", theme.MOTIFS)
+        for cy in range(-30, H + 60, 72):
+            fn(d, BW // 2, cy, 22, _tint((255, 255, 255), accent, 0.30), 2)
+        d.rectangle([BW, 0, BW + 5, H], fill=_tint(accent, bg, 0.45))
+
+    elif style == 3:                     # top and bottom rules
+        d.rectangle([0, 0, W, int(H * 0.012)], fill=accent)
+        d.rectangle([M, int(H * 0.175), W - M, int(H * 0.175) + 4], fill=accent)
+        d.rectangle([M, int(H * 0.175) + 12, W - M, int(H * 0.175) + 14],
+                    fill=_tint(accent, bg, 0.4))
+
+    else:                                # arch panel
+        d.rounded_rectangle([M, int(H * 0.14), W - M, H - M],
+                            radius=int(W * 0.09), fill=panel,
+                            outline=accent, width=3)
+    return M
 
 
-def _text_fields(job):
-    translate.enrich(job)
-    return (job.get("org_ar") or job["org"],
-            job.get("title_ar") or job["title"],
-            job.get("location_ar") or job["location"],
-            job.get("closing_ar") or job["closing"])
-
-
-def build_card(job, out_path):
+def build_card(job, out_path, W=CARD_W, H=CARD_H):
     _assert_raqm()
-    org, title, loc, closing = _text_fields(job)
+    _text_fields(job)
+    out = out_path
+    seed = job.get("fp") or job.get("key") or job.get("title", "x")
+    pal = theme.pick(f"{seed}:pal", theme.PALETTES)
+    bg, panel, ink, accent, muted = pal
+    style = theme.variant(seed, "frame", 5)
 
-    im = Image.open(TEMPLATE).convert("RGB")
+    im = theme.texture((W, H), seed, _tint(ink, bg, 0.10), bg)
     d = ImageDraw.Draw(im)
 
-    f_lab = _font("Tajawal-Bold.ttf", 40)
-    f_org = _font("Tajawal-Bold.ttf", 36)
-    org_lines = _wrap(d, org, f_org, MAXW)[:2]
+    # content panel keeps text off the texture
+    PX = int(W * 0.10)
+    PY0, PY1 = int(H * 0.20), int(H * 0.74)
+    if style != 4:
+        d.rounded_rectangle([PX, PY0, W - PX, PY1], radius=int(W * 0.035),
+                            fill=panel)
+    M = frame(im, d, W, H, style, pal, seed)
+    d = ImageDraw.Draw(im)
 
-    logo = _logo_path(job.get("org", ""), job.get("org_slug", ""))
-    badge_h = (BADGE_R * 2 + 18) if logo else 0
+    CX = W // 2 + (int(W * 0.05) if style == 2 else 0)
+    MAXW = int(W * 0.72)
 
-    fixed = badge_h + 52 + len(org_lines) * 46 + 10
-    budget = BOTTOM - TOP - fixed
+    # header: page mark
+    pg = os.path.join(LOGOS, "page.png")
+    if os.path.exists(pg):
+        lg = Image.open(pg).convert("RGBA")
+        lw = int(W * 0.20)
+        lg = lg.resize((lw, int(lg.height * lw / lg.width)))
+        im.paste(lg, (CX - lw // 2, int(H * 0.045)), lg)
+    else:
+        ar(d, (CX, int(H * 0.05)), "تقديم للوظائف",
+           F("Tajawal-Bold.ttf", int(W * 0.042)), accent)
 
-    for size in (62, 56, 50, 44, 38, 34):
-        f_ti = _font("Tajawal-Bold.ttf", size)
-        lines = _wrap(d, title, f_ti, MAXW)
-        if len(lines) <= 3 and len(lines) * (size + 10) <= budget:
+    kind = job.get("kind", "job")
+    label = {"job": "فرصة عمل", "course": "فرصة تدريب",
+             "volunteer": "فرصة تطوّع"}.get(kind, "فرصة عمل")
+
+    org = job.get("org_ar") or job.get("org", "")
+    title = job.get("title_ar") or job.get("title", "")
+    loc = job.get("location_ar") or job.get("location", "")
+    close = job.get("closing_ar") or job.get("closing", "")
+
+    y = PY0 + int(H * 0.035)
+    ar(d, (CX, y), label, F("Tajawal-Bold.ttf", int(W * 0.033)), accent)
+    y += int(H * 0.042)
+
+    f_org = F("Tajawal-Regular.ttf", int(W * 0.034))
+    for ln in wrap(d, org, f_org, MAXW)[:2]:
+        ar(d, (CX, y), ln, f_org, muted)
+        y += int(H * 0.032)
+    y += int(H * 0.012)
+
+    budget = PY1 - y - int(H * 0.16)
+    for sz in (0.062, 0.055, 0.048, 0.042, 0.036):
+        f_ti = F("Tajawal-Bold.ttf", int(W * sz))
+        lines = wrap(d, title, f_ti, MAXW)
+        if len(lines) <= 3 and len(lines) * (f_ti.size + 12) <= budget:
             break
-    lines = lines[:3]
+    for ln in lines[:3]:
+        ar(d, (CX, y), ln, f_ti, ink)
+        y += f_ti.size + 12
 
-    stack = fixed + len(lines) * (size + 10)
-    top = TOP + max(0, (BOTTOM - TOP - stack) // 2)
+    # meta rule + values
+    y = PY1 - int(H * 0.115)
+    d.rectangle([PX + 40, y, W - PX - 40, y + 2], fill=_tint(muted, panel, 0.5))
+    y += int(H * 0.018)
+    f_m = F("Tajawal-Regular.ttf", int(W * 0.030))
+    if loc:
+        ar(d, (CX, y), f"الموقع:  {loc}", f_m, ink)
+        y += int(H * 0.034)
+    if close:
+        ar(d, (CX, y), f"آخر موعد:  {close}",
+           F("Tajawal-Bold.ttf", int(W * 0.030)), accent)
 
-    if logo:
-        _paste_logo(im, logo, CX, top + BADGE_R)
-        d = ImageDraw.Draw(im)
-    y = top + badge_h
+    # CTA pill
+    cta = {"job": "قدّم الآن", "course": "سجّل الآن",
+           "volunteer": "تطوّع الآن"}.get(kind, "قدّم الآن")
+    f_c = F("Tajawal-Bold.ttf", int(W * 0.034))
+    tw = d.textlength(cta, font=f_c, direction="rtl", language="ar")
+    pw, ph = tw + int(W * 0.075), f_c.size + int(H * 0.028)
+    by = int(H * 0.795)
+    d.rounded_rectangle([CX - pw / 2, by, CX + pw / 2, by + ph],
+                        radius=ph / 2, fill=accent)
+    ar(d, (CX, by + int(H * 0.014)), cta, f_c, (255, 255, 255))
 
-    _ar(d, (CX, y), "فرصة عمل", f_lab, GREY)
-    y += 52
-    for ln in org_lines:
-        _ar(d, (CX, y), ln, f_org, BLUE)
-        y += 46
-    y += 10
-    for ln in lines:
-        _ar(d, (CX, y), ln, f_ti, INK)
-        y += size + 10
+    # footer
+    fh = int(H * 0.062)
+    d.rectangle([0, H - fh, W, H], fill=accent)
+    ar(d, (CX, H - fh + int(fh * 0.26)), "شركاؤك في الوصول",
+       F("Tajawal-Bold.ttf", int(W * 0.030)), (255, 255, 255))
 
-    # values follow the labels already printed on the template
-    _ar(d, (LOC_VALUE_X, LOC_Y), loc,
-        _font("Tajawal-Regular.ttf", 38), INK, anchor="ra")
-    if closing:
-        _ar(d, (CLOSE_VALUE_X, CLOSE_Y), closing,
-            _font("Tajawal-Bold.ttf", 38), BLUE, anchor="ra")
-
-    im.save(out_path, "PNG", optimize=True)
-    return out_path
+    im.save(out)
+    return out
     
