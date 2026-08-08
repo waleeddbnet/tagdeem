@@ -283,3 +283,211 @@ def build_digest(jobs, out_path, total=None, W=CARD_W, H=CARD_H):
 
     im.save(out_path, "PNG", optimize=True)
     return out_path
+
+
+# ---------------------------------------------------------------------------
+# Tip card: advice, checklists and questions. Not a vacancy.
+# ---------------------------------------------------------------------------
+KIND_LABEL = {
+    "tip": "نصيحة",
+    "steps": "خطوات عملية",
+    "mistake": "أخطاء شائعة",
+    "fact": "معلومة مفيدة",
+    "question": "سؤال لكم",
+}
+
+
+def build_tip(tip, out_path, W=CARD_W, H=CARD_H):
+    """tip: dict from tips.TIPS"""
+    _assert_raqm()
+    kind = tip.get("kind", "tip")
+    seed = tip["title"]
+
+    pal = theme.pick(f"{seed}:pal", theme.PALETTES)
+    bg, panel, ink, accent, muted = pal
+
+    im = theme.texture((W, H), seed, _tint(ink, bg, 0.10), bg)
+    d = ImageDraw.Draw(im)
+
+    PX = int(W * 0.06)
+    PY0, PY1 = int(H * 0.145), int(H * 0.895)
+    d.rounded_rectangle([PX, PY0, W - PX, PY1], radius=int(W * 0.035), fill=panel)
+    d.rectangle([0, 0, W, 6], fill=accent)
+
+    CX = W // 2
+
+    pg = os.path.join(LOGOS, "page.png")
+    if os.path.exists(pg):
+        lg = Image.open(pg).convert("RGBA")
+        lw = int(W * 0.17)
+        lg = lg.resize((lw, int(lg.height * lw / lg.width)))
+        im.paste(lg, (CX - lw // 2, int(H * 0.022)), lg)
+
+    y = PY0 + int(H * 0.030)
+    ar(d, (CX, y), KIND_LABEL.get(kind, "نصيحة"),
+       F("Tajawal-Bold.ttf", 34), accent)
+    y += 56
+
+    # headline, wrapped
+    for sz in (58, 52, 46, 40):
+        f_h = F("Tajawal-Bold.ttf", sz)
+        hl = wrap(d, tip["title"], f_h, W - 2 * PX - 80)
+        if len(hl) <= 2:
+            break
+    for ln in hl[:2]:
+        ar(d, (CX, y), ln, f_h, ink)
+        y += sz + 10
+    y += 18
+
+    d.rectangle([PX + 70, y, W - PX - 70, y + 3], fill=_tint(accent, panel, 0.5))
+    y += 34
+
+    # body rows, numbered for steps, bulleted otherwise
+    rows = tip["body"]
+    avail = (PY1 - int(H * 0.09)) - y
+    step = max(60, min(96, avail // max(1, len(rows))))
+    f_b = F("Tajawal-Regular.ttf", max(26, min(36, int(step * 0.40))))
+    RX = W - PX - 56
+
+    for i, b in enumerate(rows, 1):
+        cy = y + f_b.size * 0.52
+        if kind == "steps":
+            d.ellipse([RX + 8, cy - 21, RX + 50, cy + 21], fill=accent)
+            d.text((RX + 29, cy), str(i), font=F("Tajawal-Bold.ttf", 26),
+                   fill=(255, 255, 255), anchor="mm")
+            tx = RX - 12
+        elif kind == "mistake":
+            d.line([(RX + 14, cy - 11), (RX + 38, cy + 11)], fill=accent, width=5)
+            d.line([(RX + 38, cy - 11), (RX + 14, cy + 11)], fill=accent, width=5)
+            tx = RX - 6
+        else:
+            d.ellipse([RX + 18, cy - 9, RX + 36, cy + 9], fill=accent)
+            tx = RX - 2
+
+        line = b
+        while d.textlength(line, font=f_b, direction="rtl",
+                           language="ar") > (W - 2 * PX - 130) and len(line) > 8:
+            line = line[:-2]
+        if line != b:
+            line += "…"
+        ar(d, (tx, y), line, f_b, ink, anchor="ra")
+        y += step
+
+    fh = int(H * 0.062)
+    d.rectangle([0, H - fh, W, H], fill=accent)
+    ar(d, (CX, H - fh + int(fh * 0.26)), "شركاؤك في الوصول",
+       F("Tajawal-Bold.ttf", 30), (255, 255, 255))
+
+    im.save(out_path, "PNG", optimize=True)
+    return out_path
+
+
+# ---------------------------------------------------------------------------
+# Photo tip card: a documentary photo with the advice laid over a dark scrim.
+# Falls back to build_tip (drawn card) when no photo exists for the category.
+# ---------------------------------------------------------------------------
+PHOTOS = "photos"
+
+
+def _photo_path(name):
+    for ext in (".jpg", ".jpeg", ".png", ".webp"):
+        p = os.path.join(PHOTOS, str(name) + ext)
+        if os.path.exists(p):
+            return p
+    return None
+
+
+def _scrim(im, W, H, top_strength=0.90, dark=(8, 14, 26)):
+    """Darken from the top so white text reads over any photo."""
+    sc = Image.new("L", (1, H))
+    px = sc.load()
+    for y in range(H):
+        q = 1 - (y / H)
+        px[0, y] = int(255 * min(1.0, max(0.0, (q - 0.10) / 0.65)) ** 1.1
+                       * top_strength)
+    sc = sc.resize((W, H))
+    return Image.composite(Image.new("RGB", (W, H), dark), im, sc)
+
+
+def build_photo_tip(tip, out_path, W=CARD_W, H=CARD_H):
+    """tip: dict from tips.TIPS, optionally carrying a 'photo' key."""
+    _assert_raqm()
+    path = _photo_path(tip.get("photo") or "default")
+    if not path:
+        return build_tip(tip, out_path, W, H)
+
+    kind = tip.get("kind", "tip")
+    accent = (7, 74, 153)
+    gold = (212, 180, 110)
+    white = (255, 255, 255)
+
+    p = Image.open(path).convert("RGB")
+    r = max(W / p.width, H / p.height)
+    p = p.resize((max(1, int(p.width * r)), max(1, int(p.height * r))),
+                 Image.LANCZOS)
+    left = (p.width - W) // 2
+    im = p.crop((left, 0, left + W, H))
+    im = _scrim(im, W, H)
+    d = ImageDraw.Draw(im)
+
+    CX = W // 2
+    M = int(W * 0.075)
+
+    pg = os.path.join(LOGOS, "page.png")
+    if os.path.exists(pg):
+        lg = Image.open(pg).convert("RGBA")
+        lw = int(W * 0.15)
+        lg = lg.resize((lw, int(lg.height * lw / lg.width)))
+        solid = Image.new("RGBA", lg.size, (255, 255, 255, 255))
+        solid.putalpha(lg.split()[3])
+        im.paste(solid, (CX - lw // 2, int(H * 0.030)), solid)
+
+    y = int(H * 0.105)
+    ar(d, (CX, y), KIND_LABEL.get(kind, "نصيحة"),
+       F("Tajawal-Bold.ttf", 34), gold)
+    y += 54
+
+    for sz in (56, 50, 44, 38):
+        f_h = F("Tajawal-Bold.ttf", sz)
+        hl = wrap(d, tip["title"], f_h, W - 2 * M)
+        if len(hl) <= 2:
+            break
+    for ln in hl[:2]:
+        ar(d, (CX, y), ln, f_h, white)
+        y += sz + 8
+    y += 22
+
+    rows = tip["body"]
+    f_b = F("Tajawal-Regular.ttf", 34 if len(rows) <= 5 else 30)
+    step = f_b.size + 42
+    RX = W - M
+
+    for i, b in enumerate(rows, 1):
+        cy = y + f_b.size * 0.52
+        if kind == "steps":
+            d.ellipse([RX - 42, cy - 21, RX, cy + 21], fill=accent)
+            d.text((RX - 21, cy), str(i), font=F("Tajawal-Bold.ttf", 26),
+                   fill=white, anchor="mm")
+        elif kind == "mistake":
+            d.line([(RX - 36, cy - 11), (RX - 12, cy + 11)], fill=gold, width=5)
+            d.line([(RX - 12, cy - 11), (RX - 36, cy + 11)], fill=gold, width=5)
+        else:
+            d.ellipse([RX - 32, cy - 9, RX - 14, cy + 9], fill=gold)
+
+        line = b
+        while d.textlength(line, font=f_b, direction="rtl",
+                           language="ar") > (W - 2 * M - 70) and len(line) > 8:
+            line = line[:-2]
+        if line != b:
+            line += "…"
+        ar(d, (RX - 62, y), line, f_b, white, anchor="ra")
+        y += step
+
+    fh = int(H * 0.062)
+    d.rectangle([0, H - fh, W, H], fill=accent)
+    ar(d, (CX, H - fh + int(fh * 0.26)), "شركاؤك في الوصول",
+       F("Tajawal-Bold.ttf", 30), white)
+
+    im.save(out_path, "PNG", optimize=True)
+    return out_path
+    
