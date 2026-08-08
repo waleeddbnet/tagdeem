@@ -198,4 +198,88 @@ def build_card(job, out_path, W=CARD_W, H=CARD_H):
 
     im.save(out)
     return out
-    
+
+
+# ---------------------------------------------------------------------------
+# Digest card: one image listing many open vacancies.
+# ---------------------------------------------------------------------------
+def build_digest(jobs, out_path, total=None, W=CARD_W, H=CARD_H):
+    _assert_raqm()
+    n = len(jobs)
+    total = total or n
+    seed = f"digest-{total}-{n}"
+
+    pal = theme.pick(f"{seed}:pal", theme.PALETTES)
+    bg, panel, ink, accent, muted = pal
+
+    im = theme.texture((W, H), seed, _tint(ink, bg, 0.10), bg)
+    d = ImageDraw.Draw(im)
+
+    PX = int(W * 0.055)
+    PY0, PY1 = int(H * 0.135), int(H * 0.905)
+    d.rounded_rectangle([PX, PY0, W - PX, PY1], radius=int(W * 0.035), fill=panel)
+    d.rectangle([0, 0, W, 6], fill=accent)
+
+    CX = W // 2
+
+    pg = os.path.join(LOGOS, "page.png")
+    if os.path.exists(pg):
+        lg = Image.open(pg).convert("RGBA")
+        lw = int(W * 0.17)
+        lg = lg.resize((lw, int(lg.height * lw / lg.width)))
+        im.paste(lg, (CX - lw // 2, int(H * 0.020)), lg)
+
+    y = PY0 + int(H * 0.026)
+    ar(d, (CX, y), "وظائف شاغرة", F("Tajawal-Bold.ttf", 34), accent)
+    y += 52
+    ar(d, (CX, y), f"{total} فرصة عمل متاحة الآن",
+       F("Tajawal-Bold.ttf", 50), ink)
+    y += 74
+    d.rectangle([PX + 60, y, W - PX - 60, y + 3], fill=_tint(accent, panel, 0.5))
+    y += 26
+
+    # size rows to the space available
+    avail = (PY1 - int(H * 0.085)) - y
+    step = max(46, min(74, avail // max(1, n)))
+    f_t = F("Tajawal-Bold.ttf", max(22, min(32, int(step * 0.46))))
+    f_m = F("Tajawal-Regular.ttf", max(18, min(24, int(step * 0.33))))
+    RX = W - PX - 46
+
+    for j in jobs:
+        org = j.get("org_ar") or j.get("org", "")
+        title = j.get("title_ar") or j.get("title", "")
+        close = j.get("closing_ar") or j.get("closing", "")
+
+        maxw = W - 2 * PX - 120
+        while d.textlength(title, font=f_t, direction="rtl",
+                           language="ar") > maxw and len(title) > 8:
+            title = title[:-2]
+        if title != (j.get("title_ar") or j.get("title", "")):
+            title += "…"
+
+        cy = y + f_t.size * 0.55
+        d.ellipse([RX + 10, cy - 7, RX + 24, cy + 7], fill=accent)
+        ar(d, (RX, y), title, f_t, ink, anchor="ra")
+
+        meta = f"{org} — {close}" if close else org
+        while d.textlength(meta, font=f_m, direction="rtl",
+                           language="ar") > maxw and len(meta) > 8:
+            meta = meta[:-2]
+        ar(d, (RX, y + f_t.size + 4), meta, f_m, muted, anchor="ra")
+        y += step
+
+    if total > n:
+        y += 6
+        ar(d, (CX, y), f"و{total - n} فرصة أخرى في التعليقات",
+           F("Tajawal-Bold.ttf", 28), accent)
+
+    ar(d, (CX, PY1 - int(H * 0.045)), "الروابط في التعليقات",
+       F("Tajawal-Bold.ttf", 30), accent)
+
+    fh = int(H * 0.062)
+    d.rectangle([0, H - fh, W, H], fill=accent)
+    ar(d, (CX, H - fh + int(fh * 0.26)), "شركاؤك في الوصول",
+       F("Tajawal-Bold.ttf", 30), (255, 255, 255))
+
+    im.save(out_path, "PNG", optimize=True)
+    return out_path
