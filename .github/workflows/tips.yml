@@ -1,0 +1,44 @@
+name: tagdeem-tips
+
+on:
+  schedule:
+    - cron: '0 15 * * 1,4,6'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (no posting)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tagdeem-tips
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: sudo apt-get update && sudo apt-get install -y libraqm0
+      - run: pip install requests beautifulsoup4 "pillow>=10"
+      - name: Post tip
+        env:
+          TIP: 'true'
+          DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || inputs.dry_run }}
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+        run: python main.py
+      - name: Commit tip counter
+        run: |
+          git config user.name  github-actions
+          git config user.email actions@github.com
+          git add state.json
+          git diff --staged --quiet || git commit -m "tip counter"
+          git push
