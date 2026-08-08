@@ -81,6 +81,49 @@ ORGS = {
     "alight": "منظمة ألايت",
     "zoa": "منظمة زوا",
     "acted": "منظمة أكتد",
+    "international medical corps": "الهيئة الطبية الدولية",
+    "medecins sans frontieres holland": "أطباء بلا حدود - هولندا",
+    "medecins sans frontieres switzerland": "أطباء بلا حدود - سويسرا",
+    "msf holland": "أطباء بلا حدود - هولندا",
+    "msf switzerland": "أطباء بلا حدود - سويسرا",
+    "msf belgium": "أطباء بلا حدود - بلجيكا",
+    "msf france": "أطباء بلا حدود - فرنسا",
+    "save the children international": "منظمة إنقاذ الطفولة الدولية",
+    "zoa international": "منظمة زوا الدولية",
+    "tgh": "منظمة ترايانغل",
+    "sci": "منظمة إنقاذ الطفولة",
+    "unv": "متطوعو الأمم المتحدة",
+    "united nations volunteers": "متطوعو الأمم المتحدة",
+    "unitams": "بعثة الأمم المتحدة المتكاملة في السودان",
+    "hac": "مفوضية العون الإنساني",
+    "british embassy": "السفارة البريطانية",
+    "dal food": "مجموعة دال للأغذية",
+    "dal group": "مجموعة دال",
+    "ctc group": "مجموعة سي تي سي",
+    "care international in sudan": "منظمة كير الدولية",
+    "care international": "منظمة كير الدولية",
+    "norwegian church aid": "المعونة الكنسية النرويجية",
+    "danchurchaid": "المعونة الكنسية الدنماركية",
+    "dan church aid": "المعونة الكنسية الدنماركية",
+    "sudanese red crescent society": "الهلال الأحمر السوداني",
+    "sudanese red crescent": "الهلال الأحمر السوداني",
+    "medecins sans frontieres belgium": "أطباء بلا حدود - بلجيكا",
+    "medecins sans frontieres switzerland": "أطباء بلا حدود - سويسرا",
+    "medecins sans frontieres spain": "أطباء بلا حدود - إسبانيا",
+    "medecins sans frontieres france": "أطباء بلا حدود - فرنسا",
+    "world vision international": "منظمة الرؤية العالمية",
+    "medecins sans frontieres belgium": "أطباء بلا حدود - بلجيكا",
+    "medecins sans frontieres spain": "أطباء بلا حدود - إسبانيا",
+    "msf belgium": "أطباء بلا حدود - بلجيكا",
+    "msf spain": "أطباء بلا حدود - إسبانيا",
+    "norwegian church aid": "المعونة الكنسية النرويجية",
+    "danchurchaid": "المعونة الكنسية الدنماركية",
+    "sudanese red crescent society": "الهلال الأحمر السوداني",
+    "sudanese red crescent": "الهلال الأحمر السوداني",
+    "world vision international": "منظمة الرؤية العالمية",
+    "care international in sudan": "منظمة كير الدولية",
+    "save the children international": "منظمة إنقاذ الطفولة",
+    "relief international": "منظمة الإغاثة الدولية",
     "sudani": "سوداني",
     "zain": "زين",
     "mtn": "إم تي إن",
@@ -119,6 +162,16 @@ ROLES = {
     "counsellor": "مرشد نفسي",
     "counselor": "مرشد نفسي",
     "pharmacist": "صيدلي",
+    "paediatrician": "طبيب أطفال",
+    "pediatrician": "طبيب أطفال",
+    "gynaecologist": "طبيب نساء وتوليد",
+    "anaesthetist": "طبيب تخدير",
+    "radiographer": "فني أشعة",
+    "physiotherapist": "أخصائي علاج طبيعي",
+    "nutritionist": "أخصائي تغذية",
+    "epidemiologist": "أخصائي أوبئة",
+    "laboratory technician": "فني مختبر",
+    "lab technician": "فني مختبر",
     "technician": "فني",
     "electrician": "كهربائي",
     "mechanic": "ميكانيكي",
@@ -148,6 +201,14 @@ ROLES = {
     "clerk": "كاتب",
     "cleaner": "عامل نظافة",
     "lead": "قائد",
+    "teacher": "معلم",
+    "principal": "مدير مدرسة",
+    "vice principal": "نائب مدير مدرسة",
+    "head teacher": "مدير مدرسة",
+    "headmaster": "مدير مدرسة",
+    "librarian": "أمين مكتبة",
+    "lecturer": "محاضر",
+    "tutor": "مدرس خصوصي",
     "professional": "أخصائي",
     "agent": "موظف",
     "call center agent": "موظف مركز اتصال",
@@ -279,6 +340,40 @@ DOMAINS = {
     "pharmacy": "الصيدلة",
     "midwifery": "القبالة",
     "primary health care": "الرعاية الصحية الأولية",
+    "preschool": "مرحلة الروضة",
+    "kindergarten": "رياض الأطفال",
+    "primary": "المرحلة الابتدائية",
+    "secondary": "المرحلة الثانوية",
+    "english": "اللغة الإنجليزية",
+    "arabic": "اللغة العربية",
+    "mathematics": "الرياضيات",
+    "math": "الرياضيات",
+    "maths": "الرياضيات",
+    "science": "العلوم",
+    "religion": "التربية الإسلامية",
+    "islamic studies": "التربية الإسلامية",
+    "physical education": "التربية البدنية",
+    "art": "التربية الفنية",
+    "global perspectives": "المنظورات العالمية",
+    "class": "الفصل",
+    "purchasing": "المشتريات",
+    "pharmacy": "الصيدلية",
+    "transport": "النقل",
+    "customs": "الجمارك",
+    "custom": "الجمارك",
+    "voucher": "القسائم",
+    "cash and voucher": "النقد والقسائم",
+    "stock": "المخزون",
+    "store": "المخازن",
+    "watsan": "المياه والإصحاح",
+    "biomedical": "الأجهزة الطبية",
+    "referral": "الإحالة",
+    "outreach": "التوعية المجتمعية",
+    "ward": "العنبر",
+    "clinical": "الرعاية السريرية",
+    "sterilization": "التعقيم",
+    "laundry": "المغسلة",
+    "kitchen": "المطبخ",
     "country": "القطري",
     "liaison": "الاتصال",
     "government": "الحكومي",
@@ -305,6 +400,20 @@ PLACES = {
     "aljazeera madani": "ود مدني، الجزيرة",
     "al jazeera madani": "ود مدني، الجزيرة",
     "wad madani": "ود مدني",
+    "madani": "ود مدني",
+    "karari": "كرري",
+    "aroma": "أروما",
+    "damazin": "الدمازين",
+    "geneina": "الجنينة",
+    "fasher": "الفاشر",
+    "obeid": "الأبيض",
+    "daein": "الضعين",
+    "kabkabiya": "كبكابية",
+    "tawila": "الطويلة",
+    "gadarif": "القضارف",
+    "halfa": "حلفا",
+    "merowe": "مروي",
+    "abyei": "أبيي",
     "wad medani": "ود مدني",
     "central darfur": "وسط دارفور",
     "north darfur": "شمال دارفور",
@@ -446,44 +555,17 @@ def translate_title(s):
     if grades:
         out += " " + " ".join(g.upper().replace(" ", "-") for g in grades)
 
-    leftover = re.sub(r"[^A-Za-z ]", " ", remaining).strip()
-    leftover = re.sub(r"\s+", " ", leftover)
-    if len(leftover) > 3 and leftover.lower() not in ("and", "for", "the", "of"):
-        out += f" ({leftover})"
-
+    # Untranslated English fragments are noise on an Arabic card, so they are
+    # dropped rather than shown in brackets. The English title is still in the
+    # caption for anyone searching for it.
     return out, True
 
 
 _ORG_TAIL = re.compile(
-    r"\s*[-–|]?\s*(sudan|south sudan|khartoum|sd)\s*$", re.I)
+    r"\s*[-–|,]?\s*(sudan|south sudan|khartoum|sd|international|"
+    r"belgium|switzerland|spain|holland|netherlands|france|germany|"
+    r"uk|usa|worldwide|global|ltd|limited|inc)\s*$", re.I)
 
 
 def translate_org(s):
-    out, hits = _sub_all(_ORG_TAIL.sub("", s), ORGS)
-    return out.strip(), bool(hits)
-
-
-def translate_place(s):
-    out, hits = _sub_all(s, PLACES)
-    return out.replace(",", "،"), bool(hits)
-
-
-def translate_date(s):
-    out, _ = _sub_all(s, MONTHS)
-    return out
-
-
-def enrich(j):
-    """Fill *_ar fields. Hand-written overrides in manual.json always win."""
-    if not j.get("title_ar"):
-        ar, ok = translate_title(j["title"])
-        j["title_ar"] = ar if ok else ""
-    if not j.get("org_ar"):
-        ar, ok = translate_org(j["org"])
-        j["org_ar"] = ar if ok else ""
-    if not j.get("location_ar"):
-        ar, ok = translate_place(j["location"])
-        j["location_ar"] = ar if ok else ""
-    if not j.get("closing_ar"):
-        j["closing_ar"] = translate_date(j["closing"])
-    return j
+    
