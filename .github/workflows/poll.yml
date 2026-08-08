@@ -1,1 +1,65 @@
+name: sudanjob-poster
 
+on:
+  schedule:
+    - cron: '0 */3 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (no posting)'
+        type: boolean
+        default: true
+      digest:
+        description: 'Post the closing-soon digest instead of individual jobs'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sudanjob-poster
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: sudo apt-get update && sudo apt-get install -y libraqm0
+      - run: pip install requests beautifulsoup4 "pillow>=10"
+
+      - name: Poll and post
+        env:
+          DRY_RUN: ${{ github.event_name == 'schedule' && 'true' || inputs.dry_run }}
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          MAX_PER_RUN: '6'
+          DIGEST: ${{ inputs.digest || 'false' }}
+          DIGEST_MAX: '14'
+          DIGEST_LINKS: '24'
+          SPACING_MIN: '40'
+        run: python main.py
+
+      - name: Upload dry-run cards
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dryrun-cards
+          path: dryrun_*.png
+          if-no-files-found: ignore
+
+      - name: Commit state
+        run: |
+          git config user.name  github-actions
+          git config user.email actions@github.com
+          git add state.json
+          git diff --staged --quiet || git commit -m "state: $(date -u +%F_%H:%M)"
+          git push
