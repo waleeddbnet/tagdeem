@@ -16,6 +16,7 @@ import requests
 import sources
 import render
 import translate
+import tips
 
 STATE_FILE = "state.json"
 GRAPH = "https://graph.facebook.com/v25.0"
@@ -33,6 +34,7 @@ TG_CHAT  = os.getenv("TG_CHAT_ID", "")
 KEEP = 1500
 
 DIGEST = os.getenv("DIGEST", "").lower() == "true"
+TIP = os.getenv("TIP", "").lower() == "true"
 DIGEST_MAX = int(os.getenv("DIGEST_MAX", "14"))     # rows printed on the card
 DIGEST_LINKS = int(os.getenv("DIGEST_LINKS", "24")) # links posted as comments
 
@@ -291,7 +293,57 @@ def _digest_comment(post_id, items):
         print(f"  links comment ok ({len(items)})")
 
 
+def run_tip():
+    """Post one advice card. Cycles through the library by run number so it
+    does not repeat until the whole set has been used."""
+    state = load_state() or {}
+    idx = state.get("tip_index", 0)
+    tip = tips.pick(index=idx)
+
+    img = "tip.png"
+    if hasattr(render, "build_photo_tip"):
+        render.build_photo_tip(tip, img)
+    else:
+        render.build_tip(tip, img)
+    cap = tips.caption(tip)
+
+    print(f"tip {idx % len(tips.TIPS)}: {tip['title']}")
+
+    if DRY_RUN:
+        print("--- dry run ---")
+        print(cap)
+        print(f"  card -> {img}")
+        return
+
+    with open(img, "rb") as fh:
+        r = requests.post(f"{GRAPH}/{PAGE_ID}/photos",
+                          data={"caption": cap, "access_token": PAGE_TOKEN},
+                          files={"source": fh}, timeout=60)
+    if r.status_code != 200:
+        print(f"  FB ERROR {r.status_code}: {r.text[:300]}", file=sys.stderr)
+        return
+    print(f"  tip posted -> {r.json().get('post_id') or r.json().get('id')}")
+
+    if TG_TOKEN and TG_CHAT:
+        try:
+            with open(img, "rb") as fh:
+                requests.post(
+                    f"https://api.telegram.org/bot{TG_TOKEN}/sendPhoto",
+                    data={"chat_id": TG_CHAT, "caption": cap[:1020]},
+                    files={"photo": fh}, timeout=45)
+            print("  telegram tip ok")
+        except Exception as e:
+            print(f"  TELEGRAM ERROR: {e}", file=sys.stderr)
+
+    state["tip_index"] = idx + 1
+    save_state(state)
+
+
 def main():
+    if TIP:
+        run_tip()
+        return
+
     if DIGEST:
         run_digest()
         return
@@ -362,3 +414,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+                          
