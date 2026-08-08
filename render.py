@@ -433,16 +433,26 @@ def build_photo_tip(tip, out_path, W=CARD_W, H=CARD_H):
     CX = W // 2
     M = int(W * 0.075)
 
+    # logo: cap by HEIGHT, not width - the mark is wide and was previously
+    # scaled to 15% of the width, which made it 250px tall and ran straight
+    # into the label and headline below it.
+    logo_bottom = int(H * 0.028)
     pg = os.path.join(LOGOS, "page.png")
     if os.path.exists(pg):
         lg = Image.open(pg).convert("RGBA")
-        lw = int(W * 0.15)
-        lg = lg.resize((lw, int(lg.height * lw / lg.width)))
+        target_h = int(H * 0.085)
+        lh = target_h
+        lw = max(1, int(lg.width * lh / lg.height))
+        if lw > int(W * 0.38):                 # very wide marks: fit to width
+            lw = int(W * 0.38)
+            lh = max(1, int(lg.height * lw / lg.width))
+        lg = lg.resize((lw, lh))
         solid = Image.new("RGBA", lg.size, (255, 255, 255, 255))
         solid.putalpha(lg.split()[3])
-        im.paste(solid, (CX - lw // 2, int(H * 0.030)), solid)
+        im.paste(solid, (CX - lw // 2, int(H * 0.028)), solid)
+        logo_bottom = int(H * 0.028) + lh
 
-    y = int(H * 0.105)
+    y = logo_bottom + int(H * 0.034)
     ar(d, (CX, y), KIND_LABEL.get(kind, "نصيحة"),
        F("Tajawal-Bold.ttf", 34), gold)
     y += 54
