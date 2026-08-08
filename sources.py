@@ -122,17 +122,52 @@ def valid(j):
 # --------------------------------------------------------------------------
 @source("sudanjob")
 def sudanjob():
-    html = requests.get("https://sudanjob.net/", headers=UA, timeout=TIMEOUT).text
+    """
+    sudanjob.net listing page.
+
+    Uses browser-like headers and falls back from www to bare domain. If a
+    page comes back but no rows parse, the reason is printed rather than
+    silently returning an empty list - a bare "0 rows" told us nothing when
+    this broke before.
+    """
+    hdrs = {
+        "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                       "AppleWebKit/537.36 (KHTML, like Gecko) "
+                       "Chrome/126.0 Safari/537.36"),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9,ar;q=0.8",
+        "Referer": "https://www.google.com/",
+        "Connection": "keep-alive",
+    }
+
+    html = ""
+    for url in ("https://www.sudanjob.net/", "https://sudanjob.net/"):
+        try:
+            r = requests.get(url, headers=hdrs, timeout=TIMEOUT)
+            if r.status_code == 200 and "jobview.php" in r.text:
+                html = r.text
+                break
+            print(f"    {url} -> HTTP {r.status_code}, {len(r.text)} bytes, "
+                  f"jobview present: {'jobview.php' in r.text}")
+        except Exception as e:
+            print(f"    {url} -> {type(e).__name__}: {e}")
+    if not html:
+        raise RuntimeError("no usable listing page from sudanjob.net")
+
     soup = BeautifulSoup(html, "html.parser")
-    out = []
+    out, seen = [], set()
 
     for a in soup.find_all("a", href=re.compile(r"jobview\.php\?id=\d+")):
         m = re.search(r"id=(\d+)", a["href"])
         title = a.get_text(" ", strip=True)
         if not m or not title or title.lower() == "view":
             continue
+        jid = m.group(1)
+        if jid in seen:
+            continue
+        seen.add(jid)
 
-        row = a.find_parent("tr") or a.parent
+        row = a.find_parent("tr") or a.find_parent("td") or a.parent
         tail = row.get_text(" ", strip=True).split(title, 1)[-1]
 
         org = tail.split("Location:")[0] if "Location:" in tail else ""
@@ -141,90 +176,18 @@ def sudanjob():
             loc = tail.split("Location:")[-1].split("Closing date:")[0]
             closing = tail.split("Closing date:")[-1].replace("View", "")
 
-        # employer logo slug, e.g. /CRS  ->  CRS
         slug = ""
         logo = row.find("a", href=re.compile(r"sudanjob\.net/[A-Za-z]+$"))
         if logo:
             slug = logo["href"].rstrip("/").split("/")[-1]
 
-        out.append(job("sudanjob", m.group(1), title, org, loc, closing,
-                       f"https://sudanjob.net/jobview.php?id={m.group(1)}",
+        out.append(job("sudanjob", jid, title, org, loc, closing,
+                       f"https://sudanjob.net/jobview.php?id={jid}",
                        org_slug=slug))
-    return out
 
-
-# --------------------------------------------------------------------------
-# ReliefWeb - official public API, no key, no scraping
-# Flip enabled=True when ready.
-# --------------------------------------------------------------------------
-@source("reliefweb")
-def reliefweb():
-    """
-    ReliefWeb API v2. NOTE: since 1 Nov 2025 the `appname` must be
-    pre-approved by ReliefWeb - request one at https://reliefweb.int/help/api
-    before enabling this source, otherwise requests are rejected.
-    """
-    r = requests.get(
-        "https://api.reliefweb.int/v2/jobs",
-        params={
-            "appname": RELIEFWEB_APPNAME,
-            "limit": 40,
-            "sort[]": "date.created:desc",
-            "filter[field]": "country.iso3",
-            "filter[value]": "sdn",
-            "fields[include][]": ["title", "source.name", "country.name",
-                                  "city.name", "date.closing", "url"],
-        },
-        headers=UA, timeout=TIMEOUT,
-    )
-    r.raise_for_status()
-    out = []
-    for item in r.json().get("data", []):
-        f = item["fields"]
-        loc = ", ".join(c["name"] for c in f.get("city", [])) or \
-              ", ".join(c["name"] for c in f.get("country", []))
-        out.append(job(
-            "reliefweb", item["id"], f.get("title", ""),
-            (f.get("source") or [{}])[0].get("name", ""),
-            loc, (f.get("date") or {}).get("closing", "")[:10],
-            f.get("url", ""),
-        ))
-    return out
-
-
-# --------------------------------------------------------------------------
-# TEMPLATE: org career site on Greenhouse-style JSON
-# Copy, rename, set enabled=True.
-# --------------------------------------------------------------------------
-@source("example_ats", enabled=False)
-def example_ats():
-    r = requests.get("https://boards-api.greenhouse.io/v1/boards/EXAMPLE/jobs",
-                     headers=UA, timeout=TIMEOUT)
-    r.raise_for_status()
-    return [
-        job("example_ats", p["id"], p["title"], "Example Org",
-            (p.get("location") or {}).get("name", ""), "", p["absolute_url"])
-        for p in r.json().get("jobs", [])
-    ]
-
-
-@source("manual")
-def manual():
-    import json
-    import os
-    if not os.path.exists("manual.json"):
-        return []
-    with open("manual.json", encoding="utf-8") as f:
-        rows = json.load(f)
-    out = []
-    for r in rows:
-        j = job("manual", r["id"], r["title"], r["org"],
-                r.get("location", ""), r["closing"], r["url"],
-                org_slug=r.get("org_slug", ""))
-        j["title_ar"] = r.get("title_ar", "")
-        j["org_ar"] = r.get("org_ar", "")
-        j["location_ar"] = r.get("location_ar", "")
-        out.append(j)
+    if not out:
+        print(f"    page fetched ({len(html)} bytes) but no rows parsed - "
+              f"layout may have changed")
     return out
 
 
@@ -356,6 +319,13 @@ F6_INCLUDE = {
     "وظائف دال", "مجموعة اراك", "وظائف شركة مروج", "وظائف كول سنتر",
     "وظائف تقنية", "وظائف طبية", "وظائف الجامعات", "شركات طيران",
     "وظائف سائقين", "وظائف الولايات",
+    "فرص التدريب", "فرص التطوع", "عمل عن بعد",
+}
+
+# label -> post kind. Drives which template the card uses.
+F6_KIND = {
+    "فرص التدريب": "course",
+    "فرص التطوع": "volunteer",
 }
 
 # Never publish these. Military and police recruitment for a party to an
@@ -438,6 +408,7 @@ def _f6_parse(title_raw, labels, content, url, ident):
     closing = re.sub(r"\s+", " ", cm.group(1)).strip() if cm else ""
 
     j = job("for6a", ident, title, org, loc, closing, url)
+    j["kind"] = next((F6_KIND[l] for l in labels if l in F6_KIND), "job")
     # content is already Arabic - lock it so translate.py leaves it alone
     j["title_ar"] = title
     j["org_ar"] = org
@@ -491,4 +462,3 @@ def collect():
             print(f"  {name}: FAILED {type(e).__name__}: {e}")
             errors.append(name)
     return all_jobs, errors
-    
