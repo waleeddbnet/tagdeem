@@ -21,6 +21,7 @@
     "for6a:ctc-marketing-executive-job-sudan",
     "for6a:ctc-supply-logistics-specialist-sudan",
     "for6a:dal-group-organization-development",
+    "for6a:digital-products-sales-assistant-bank-of-khartoum",
     "for6a:electrical-engineer-jobs-nepta-energy",
     "for6a:excellence-junior-school-ict-teacher-sudan",
     "for6a:finance-manager-zulal-mig-group-sudan",
@@ -29,6 +30,7 @@
     "for6a:general-ledger-accountant-mig-food-sudan",
     "for6a:health-insurance-officer-jobs-alkarama",
     "for6a:internal-auditor-mig-group-sudan",
+    "for6a:logistics-procurement-officer-sudan",
     "for6a:mahgoub-sons-business-partner",
     "for6a:mahgoub-sons-management-accounts-manager",
     "for6a:mahgoub-sons-trade-marketing-team-leader",
@@ -273,7 +275,8 @@
     "sudanjob:16913",
     "sudanjob:16915",
     "sudanjob:16916",
-    "sudanjob:16917"
+    "sudanjob:16917",
+    "sudanjob:16918"
   ],
   "fps": [
     "014196217ff0e114",
@@ -455,6 +458,7 @@
     "ddc8c218042e4dc9",
     "de4b4a01870b8362",
     "df892a22896c078c",
+    "e13bb8fcbc316848",
     "e19e5156de57c974",
     "e1a924af121f6519",
     "e21b8f3deab419f0",
