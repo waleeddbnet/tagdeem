@@ -26,6 +26,7 @@
     "for6a:ctc-marketing-executive-job-sudan",
     "for6a:ctc-supply-logistics-specialist-sudan",
     "for6a:dal-group-organization-development",
+    "for6a:dal-motors-sales-consultant-khartoum",
     "for6a:digital-products-sales-assistant-bank-of-khartoum",
     "for6a:drc-hr-admin-officer-nertiti-sudan",
     "for6a:ebs-sudan-junior-deployment-engineer-job",
@@ -41,6 +42,7 @@
     "for6a:general-ledger-accountant-mig-food-sudan",
     "for6a:hdr-gas-graduate-engineers-jobs-sudan",
     "for6a:health-insurance-officer-jobs-alkarama",
+    "for6a:hydraulic-research-center-sudan-jobs",
     "for6a:internal-auditor-mig-group-sudan",
     "for6a:iom-dtm-programme-coordinator-khartoum",
     "for6a:logistics-procurement-officer-sudan",
@@ -48,6 +50,7 @@
     "for6a:mahgoub-sons-management-accounts-manager",
     "for6a:mahgoub-sons-trade-marketing-team-leader",
     "for6a:mamoun-elberier-electrical-instrumentation-maintenance-specialist",
+    "for6a:mamoun-elberier-procurement-manager",
     "for6a:medical-assistant-mining-company-sudan",
     "for6a:medical-representative-mms-gadaref",
     "for6a:mega-food-industries-pepsi-finance",
@@ -61,6 +64,7 @@
     "for6a:mtn-sudan-radio-network-planning-senior-engineer",
     "for6a:mtn-sudan-retail-territory-manager",
     "for6a:mtn-sudan-telecom-power-planning-manager",
+    "for6a:mtn-sudan-territory-sales-manager-kurdufan",
     "for6a:national-audit-chamber-sudan-jobs",
     "for6a:odoo-techno-functional-specialist-mig",
     "for6a:pan-sudan-resources-mining-senior",
@@ -85,6 +89,7 @@
     "for6a:technological-university-khartoum",
     "for6a:tirhal-business-hub-receptionist",
     "for6a:umdurman-mining-operation-executive-alebidia",
+    "for6a:umdurman-mining-safety-executive-job",
     "for6a:water-treatment-plant-analyst-mega-food",
     "for6a:yamy-audit-office-executive-manager-job",
     "for6a:yamy-group-accountant-job-wad-medani",
@@ -341,7 +346,9 @@
     "sudanjob:16938",
     "sudanjob:16939",
     "sudanjob:16940",
-    "sudanjob:16941"
+    "sudanjob:16941",
+    "sudanjob:16943",
+    "sudanjob:16944"
   ],
   "fps": [
     "014196217ff0e114",
@@ -546,6 +553,7 @@
     "c9bf4806e5c077b1",
     "ccda06879d1745e8",
     "ced0f857cd8d0e75",
+    "cfcb51e6044b1423",
     "d0b25a2198029467",
     "d2e753deea598c6e",
     "d40cfbfdc20e822f",
@@ -594,7 +602,8 @@
     "f6618daf9e87ce2a",
     "f78f11b6699188bf",
     "f8025c1be7db836c",
-    "f973a520a066b045"
+    "f973a520a066b045",
+    "faf83c6ec64edeac"
   ],
   "pending": [],
   "tip_index": 13
