@@ -5,6 +5,7 @@
     "for6a: sadagaat-senior-accountant-job-khartoum",
     "for6a:accountant-jobs-beauty-center-khartoum",
     "for6a:administrative-officer-job-khartoum-sudan",
+    "for6a:alsharq-university-secretary-job",
     "for6a:arcd-administrative-accountant-khartoum",
     "for6a:bank-of-khartoum-financial-institution",
     "for6a:bank-of-khartoum-purchase-contracts-senior-manager",
@@ -68,7 +69,9 @@
     "for6a:national-audit-chamber-sudan-jobs",
     "for6a:odoo-techno-functional-specialist-mig",
     "for6a:pan-sudan-resources-mining-senior",
+    "for6a:port-sudan-police-hospital-recruitment",
     "for6a:power-electrical-technician-port-sudan",
+    "for6a:rafm-technology-and-controls",
     "for6a:recruitment-specialist-mtn-sudan",
     "for6a:restaurant-cafe-manager",
     "for6a:sadagaat-procurement-officer-job-khartoum",
@@ -83,6 +86,7 @@
     "for6a:sharg-alneel-hospital-storekeeper-job",
     "for6a:shendi-university-teaching-jobs",
     "for6a:smart-yami-general-manager-job-wad-madani",
+    "for6a:sudani-ps-core-network-planning-senior",
     "for6a:sudania-24-media-presenters-trainees",
     "for6a:sudarecboard-ministry-finance-sudan-jobs",
     "for6a:sudaservice-sales-expert-job-sudatel",
@@ -363,7 +367,8 @@
     "sudanjob:16952",
     "sudanjob:16953",
     "sudanjob:16954",
-    "sudanjob:16955"
+    "sudanjob:16955",
+    "sudanjob:16956"
   ],
   "fps": [
     "014196217ff0e114",
@@ -617,6 +622,7 @@
     "e7c5340a0ebb3e6d",
     "e908df8db59f6404",
     "e9693fdf7a45a744",
+    "eadea229e282fb12",
     "ee16b1275d5334cb",
     "ee443ed968543af7",
     "ee467eb8ea95773b",
