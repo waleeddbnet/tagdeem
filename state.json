@@ -151,6 +151,8 @@
     "for6a:yamy-group-accountant-job-wad-medani",
     "for6a:yamy-group-cpp-developer-jobs-wad-medani",
     "for6a:yamy-group-python-developer-jobs-wad",
+    "for6a:zain-vocational-training-al-thawra",
+    "for6a:zain-vocational-training-shendi",
     "manual:2026-07-24-unhcr-liaison",
     "manual:2026-07-24-unicef-sec",
     "manual:2026-07-24-wfp-fin",
@@ -514,7 +516,8 @@
     "sudanjob:17019",
     "sudanjob:17020",
     "sudanjob:17021",
-    "sudanjob:17022"
+    "sudanjob:17022",
+    "sudanjob:17024"
   ],
   "fps": [
     "014196217ff0e114",
@@ -803,6 +806,7 @@
     "c63e992676c41874",
     "c65b11543ea0fda0",
     "c65f37b2cb1ae26c",
+    "c7f18c00093c72bb",
     "c8894f73b50c83b2",
     "c9bf4806e5c077b1",
     "cb2a0892f5cbf3a1",
