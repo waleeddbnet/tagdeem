@@ -46,6 +46,8 @@
     "for6a:ctc-shared-services-associate-sudan",
     "for6a:ctc-supply-logistics-specialist-sudan",
     "for6a:ctc-treasury-operations-associate",
+    "for6a:dal-food-senior-financial-analyst",
+    "for6a:dal-food-utility-engineer-khartoum",
     "for6a:dal-group-dal-engineering-senior",
     "for6a:dal-group-organization-development",
     "for6a:dal-motors-sales-consultant-khartoum",
@@ -89,6 +91,7 @@
     "for6a:mega-food-pepsi-employee-welfare",
     "for6a:mega-food-pepsi-hr-support-services",
     "for6a:mega-food-pepsi-it-hardware-team-leader",
+    "for6a:mega-food-pepsi-sales-supervisor-gezira",
     "for6a:mega-food-pepsi-storekeeper-kassala",
     "for6a:mig-food-assistant-general-manager-khartoum-",
     "for6a:mig-food-chief-accountant",
@@ -584,7 +587,8 @@
     "sudanjob:17058",
     "sudanjob:17060",
     "sudanjob:17061",
-    "sudanjob:17062"
+    "sudanjob:17062",
+    "sudanjob:17063"
   ],
   "fps": [
     "014196217ff0e114",
@@ -828,6 +832,7 @@
     "975ee5643169c713",
     "97970aa70a5c44b7",
     "9871e2055e7a0114",
+    "98872f475656e038",
     "98ab446b802a97a7",
     "9abd22baa81e41bc",
     "9cc9dcafe9093997",
