@@ -153,6 +153,7 @@
     "for6a:teaching-assistants-karary-university",
     "for6a:technological-university-khartoum",
     "for6a:tirhal-business-hub-receptionist",
+    "for6a:umdurman-mining-electrical-technician",
     "for6a:umdurman-mining-operation-executive-alebidia",
     "for6a:umdurman-mining-safety-executive-job",
     "for6a:university-of-bahri-teaching-assistant-jobs",
@@ -616,9 +617,13 @@
     "sudanjob:17077",
     "sudanjob:17078",
     "sudanjob:17079",
-    "sudanjob:17080"
+    "sudanjob:17080",
+    "sudanjob:17083",
+    "sudanjob:17084",
+    "sudanjob:17085"
   ],
   "fps": [
+    "00d1b28b4086c781",
     "014196217ff0e114",
     "0161b7e929a364b0",
     "024fa215c3c7a73e",
@@ -720,6 +725,7 @@
     "3b247987852e80e7",
     "3b98be3bfc994d6f",
     "3c2692313eae4344",
+    "3c7a47ffa1a584f6",
     "3da5ea2887c7cabf",
     "3f2d706ddd9ad0a9",
     "3f5f47eb701b4077",
@@ -829,6 +835,7 @@
     "7f4bb780d9de7619",
     "7f67090dd4ffbe41",
     "801460389f2ad335",
+    "810e457e2b00a6df",
     "8161f0c05a228337",
     "81db961ecc44fefe",
     "8279f4f650b319ed",
