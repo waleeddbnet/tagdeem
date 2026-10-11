@@ -73,6 +73,7 @@
     "for6a:graphic-design-senior-specialist-sudani",
     "for6a:hdr-gas-graduate-engineers-jobs-sudan",
     "for6a:health-insurance-officer-jobs-alkarama",
+    "for6a:hr-officer-industrial-company-omdurman",
     "for6a:hse-morouj-hse-team-leader-khartoum",
     "for6a:hydraulic-research-center-sudan-jobs",
     "for6a:internal-auditor-mig-group-sudan",
@@ -157,6 +158,7 @@
     "for6a:umdurman-mining-operation-executive-alebidia",
     "for6a:umdurman-mining-safety-executive-job",
     "for6a:university-of-bahri-teaching-assistant-jobs",
+    "for6a:vanilla-mix-ice-cream-shop-jobs-omdurman",
     "for6a:vas-b2c-digital-vas-senior-specialist",
     "for6a:water-treatment-plant-analyst-mega-food",
     "for6a:west-kordofan-university-teaching-assistant-jobs",
@@ -319,6 +321,8 @@
     "sudani:b2c-digital-vas-senior-specialist",
     "sudani:b2c-prepaid-product-specialist",
     "sudani:billing-crm-expert",
+    "sudani:billing-settlement-account-professional",
+    "sudani:brand-activations-senior-specialist",
     "sudani:brand-identity-events-professional",
     "sudani:building-maintenance-professional",
     "sudani:business-assurance-measurement-specialist-2",
@@ -650,6 +654,7 @@
     "sudanjob:17086"
   ],
   "fps": [
+    "00265ac886b18fbb",
     "00d1b28b4086c781",
     "014196217ff0e114",
     "0161b7e929a364b0",
@@ -1107,6 +1112,7 @@
     "f9f57f104412fced",
     "fa1ee4871937ad8c",
     "fa670cb384610647",
+    "fa9d42e380a9e6b3",
     "faf83c6ec64edeac",
     "fcf7747508d27ff5",
     "fdda3a3a0033c715"
