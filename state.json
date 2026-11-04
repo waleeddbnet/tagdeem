@@ -351,6 +351,9 @@
     "sudancareer:15090",
     "sudancareer:15092",
     "sudancareer:15095",
+    "sudancareer:15098",
+    "sudancareer:15101",
+    "sudancareer:15103",
     "sudancareer:assistant-field-officer-kosti-2",
     "sudancareer:education-officer-khartoum-3",
     "sudancareer:emergency-information-management-and-reporting-officer",
@@ -778,7 +781,9 @@
     "sudanjob:17154",
     "sudanjob:17155",
     "sudanjob:17156",
-    "sudanjob:17157"
+    "sudanjob:17157",
+    "sudanjob:17158",
+    "sudanjob:17159"
   ],
   "fps": [
     "00265ac886b18fbb",
@@ -809,6 +814,7 @@
     "0cd1a95f12e873a5",
     "0d85006ad23d8f1c",
     "0db87fc5232cd570",
+    "0eeb2b6cb3c15da5",
     "0f2603aeda294110",
     "0f8969886fd0c61a",
     "0f974ceefdf2367a",
@@ -819,6 +825,7 @@
     "125d1c56586a1774",
     "12c8c0351fd24173",
     "12d799c597df95c6",
+    "12d9d35aa7f585ca",
     "12eb5efca5451d1a",
     "13246bdd0546b40a",
     "1350a0de5d8d46dd",
@@ -1045,6 +1052,7 @@
     "7821367dbc632f55",
     "7823d5247496ae85",
     "784fef27de96cd6b",
+    "787bc58085641005",
     "787c0356b0c284bb",
     "7923fb5697338af9",
     "7b021ef4cc16a53e",
@@ -1222,6 +1230,7 @@
     "c4525f64b41200ba",
     "c48a77b995bf7f3c",
     "c4f093d6437a8b53",
+    "c616be671541d2da",
     "c63e992676c41874",
     "c65b11543ea0fda0",
     "c65f37b2cb1ae26c",
@@ -1343,7 +1352,8 @@
     "faf83c6ec64edeac",
     "fcde87881facb3c9",
     "fcf7747508d27ff5",
-    "fdda3a3a0033c715"
+    "fdda3a3a0033c715",
+    "feb6dc91f4409810"
   ],
   "pending": [],
   "tip_index": 40
