@@ -59,6 +59,7 @@
     "for6a:ctc-group-cost-accountant-khartoum-sudan",
     "for6a:ctc-group-ctc-group-training-specialist",
     "for6a:ctc-group-digitech-electrician-khartoum",
+    "for6a:ctc-group-engineering-development",
     "for6a:ctc-group-general-services-manager",
     "for6a:ctc-group-ism-communication-manager",
     "for6a:ctc-group-logistics-supply-chain",
@@ -897,7 +898,13 @@
     "sudanjob:17205",
     "sudanjob:17207",
     "sudanjob:17208",
-    "sudanjob:17209"
+    "sudanjob:17209",
+    "sudanjob:17210",
+    "sudanjob:17211",
+    "sudanjob:17212",
+    "sudanjob:17213",
+    "sudanjob:17214",
+    "sudanjob:17215"
   ],
   "fps": [
     "00265ac886b18fbb",
@@ -969,6 +976,7 @@
     "1717b5e024ed5a67",
     "171d4d32789924a0",
     "1743ffaf321b857d",
+    "1770706835ac28fe",
     "180038c9f708df55",
     "18e394b29544a57f",
     "19e97a23d21c134a",
@@ -1022,6 +1030,7 @@
     "2da158c738a0f83c",
     "2ebb32a0a0fda50e",
     "2f29643dd9c80b81",
+    "2f2e32e35ce3dceb",
     "2f51efbe98920655",
     "2fa7311cef634911",
     "2fc17ae79f1393f1",
@@ -1093,6 +1102,7 @@
     "46c874347eb7055b",
     "47111e66fbf43ec9",
     "48f8a64bc08d7e5d",
+    "495b3d92dffe8f20",
     "496688c23a0d190d",
     "49841f7cb5f4b8f8",
     "49982dbd1c691b7f",
@@ -1208,6 +1218,7 @@
     "73e5575bb659aabd",
     "7483644e32844705",
     "752581df45c95808",
+    "755ae8ef29be0b8b",
     "75af593f36dd3c03",
     "75e0b6c531739b17",
     "75fa62c9e850f436",
@@ -1418,6 +1429,7 @@
     "bed98ce40910b2c0",
     "bf002623d9a2d8b9",
     "bf41fd18e73763dd",
+    "c097ae885c2c8ba9",
     "c1d3d443d1bdd6c9",
     "c1f835b96cc1553f",
     "c284e2e038404e08",
@@ -1575,7 +1587,8 @@
     "fcf7747508d27ff5",
     "fdda3a3a0033c715",
     "feb6dc91f4409810",
-    "ff73d8dcd10579a4"
+    "ff73d8dcd10579a4",
+    "ffd67775f1f0b130"
   ],
   "pending": [],
   "tip_index": 49
